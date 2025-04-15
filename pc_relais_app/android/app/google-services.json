@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "636492327464",
+    "project_id": "pc-relais-app",
+    "storage_bucket": "pc-relais-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:636492327464:android:f5e8c814a7bf0a6249e31d",
+        "android_client_info": {
+          "package_name": "com.pcrelais.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrnr9g4eB5JNrIMRdOuX2LpD9D0PwdCkg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

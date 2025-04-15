@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Application mobile pour le service PC Relais - réparation informatique et vente de matériel reconditionné via des points relais.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="pc_relais_app">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>PC Relais</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Firebase SDK v9.17.2 (compatible avec firebase_core: ^2.15.1) -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-analytics.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-auth.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+    import { getStorage } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-storage.js";
+    import { getMessaging } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-messaging.js";
+    
+    // Configuration Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCyyHI2rSYvsPfUc5pO6xkHExxIpkoaKM",
+      authDomain: "pc-relais-app.firebaseapp.com",
+      projectId: "pc-relais-app",
+      storageBucket: "pc-relais-app.appspot.com",
+      messagingSenderId: "636492327464",
+      appId: "1:636492327464:web:3f84a5dcd158358a49e31d",
+      measurementId: "G-VEZPWPMXS1"
+    };
+    
+    // Initialiser Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const firestore = getFirestore(app);
+    const storage = getStorage(app);
+    const messaging = getMessaging(app);
+    
+    // Rendre les instances Firebase disponibles globalement pour Flutter
+    window.firebaseApp = app;
+    window.firebaseAuth = auth;
+    window.firebaseFirestore = firestore;
+    window.firebaseStorage = storage;
+    window.firebaseMessaging = messaging;
+  </script>
+</head>
+<body>
+  <!-- Chargement de l'application -->
+  <div id="loading">
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+      #loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+      }
+      .logo {
+        width: 120px;
+        height: 120px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #1E88E5;
+        border-radius: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .logo-icon {
+        font-size: 60px;
+        color: white;
+      }
+      .title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #1E88E5;
+      }
+      .subtitle {
+        font-size: 16px;
+        color: #757575;
+        margin-bottom: 24px;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(30, 136, 229, 0.2);
+        border-top: 4px solid #1E88E5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+    <div class="logo">
+      <span class="logo-icon">💻</span>
+    </div>
+    <div class="title">PC Relais</div>
+    <div class="subtitle">Réparation informatique de proximité</div>
+    <div class="spinner"></div>
+  </div>
+  
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
