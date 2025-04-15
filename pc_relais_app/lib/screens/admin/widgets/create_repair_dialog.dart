@@ -388,16 +388,32 @@ class _CreateRepairDialogState extends State<CreateRepairDialog> {
           const SizedBox(height: 16),
           
           // Type d'appareil (obligatoire)
-          TextField(
-            controller: deviceTypeController,
+          DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'Type d\'appareil *',
-              hintText: 'Ex: Ordinateur portable, Smartphone',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
               ),
               prefixIcon: const Icon(Icons.devices),
             ),
+            value: deviceTypeController.text.isNotEmpty ? deviceTypeController.text : null,
+            items: [
+              'PC Portable',
+              'PC Fixe',
+              'Imprimante',
+              'MacBook',
+              'Téléphone mobile',
+              'Autre',
+            ].map((type) => DropdownMenuItem(
+                  value: type,
+                  child: Text(type),
+                )).toList(),
+            onChanged: (value) {
+              setState(() {
+                deviceTypeController.text = value ?? '';
+              });
+            },
+            validator: (value) => value == null || value.isEmpty ? 'Veuillez sélectionner un type d\'appareil' : null,
           ),
           const SizedBox(height: 12),
           
