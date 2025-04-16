@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/repair_service.dart';
 import '../../models/repair_model.dart';
+import '../../models/deposit_model.dart';
+import '../../widgets/deposit_qr_widget.dart';
 import '../../models/user_model.dart';
 import '../../models/point_relais_model.dart';
 import '../../theme/app_theme.dart';
@@ -312,6 +314,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
   }
   
   Widget _buildDeviceCard(RepairModel repair) {
+  // On suppose que le RepairModel a un champ depositId (sinon à adapter)
+  DepositModel? deposit = repair.deposit;
+
     // Déterminer l'icône et la couleur en fonction du statut
     IconData statusIcon;
     Color statusColor;
@@ -443,6 +448,10 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                           textStyle: const TextStyle(fontSize: 12),
                         ),
                       ),
+                    if (deposit != null && deposit.code.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      DepositQrWidget(deposit: deposit),
+                    ],
                     if (repair.status == 'waiting_repair')
                       ElevatedButton.icon(
                         onPressed: () {

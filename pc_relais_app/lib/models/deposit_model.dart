@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 class DepositModel {
   final String id;
+  final String code; // Ajouté pour identifiant texte
   final String clientId;
   final String firstName;
   final String lastName;
@@ -19,6 +20,7 @@ class DepositModel {
 
   DepositModel({
     String? id,
+    String? code,
     required this.clientId,
     required this.firstName,
     required this.lastName,
@@ -34,10 +36,17 @@ class DepositModel {
     DateTime? createdAt,
     this.status = 'pending',
   })  : id = id ?? const Uuid().v4(),
+        code = code ?? _generateCode(),
         createdAt = createdAt ?? DateTime.now();
+
+  static String _generateCode() {
+    final random = DateTime.now().millisecondsSinceEpoch.remainder(1000000);
+    return 'REP${random.toString().padLeft(6, '0')}';
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'code': code,
         'client_id': clientId,
         'first_name': firstName,
         'last_name': lastName,
@@ -56,6 +65,7 @@ class DepositModel {
 
   factory DepositModel.fromJson(Map<String, dynamic> json) => DepositModel(
         id: json['id'] as String?,
+        code: json['code'] as String? ?? '',
         clientId: json['client_id'] as String,
         firstName: json['first_name'] as String,
         lastName: json['last_name'] as String,
@@ -67,8 +77,8 @@ class DepositModel {
         devicePassword: json['device_password'] as String?,
         pointRelaisId: json['point_relais_id'] as String,
         issue: json['issue'] as String?,
-        photoUrls: (json['photo_urls'] as List?)?.map((e) => e.toString()).toList(),
-        createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
-        status: json['status'] as String? ?? 'pending',
+        photoUrls: (json['photo_urls'] as List<dynamic>?)?.cast<String>(),
+        createdAt: DateTime.parse(json['created_at'] as String),
+        status: json['status'] as String,
       );
 }

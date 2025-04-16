@@ -4,6 +4,7 @@ import '../../services/repair_service.dart';
 import '../../services/deposit_service.dart';
 import '../../models/deposit_model.dart';
 import '../../models/repair_model.dart';
+import '../../widgets/deposit_qr_widget.dart';
 import '../../theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -90,7 +91,7 @@ class _ScanDeviceScreenState extends State<ScanDeviceScreen> {
     
     try {
       final depositService = DepositService(Supabase.instance.client);
-      final deposit = await depositService.getDepositById(depositId);
+      final deposit = await depositService.getDepositByIdOrReference(depositId);
       if (deposit != null) {
         setState(() {
           _isLoading = false;
@@ -360,6 +361,33 @@ class _ScanDeviceScreenState extends State<ScanDeviceScreen> {
                     ),
                   ]
                 : []),
+
+            // Affichage fiche dépôt trouvée (code + QR)
+            if (_deposit != null) ...[
+              const SizedBox(height: 32),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text('Dépôt trouvé', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      // Widget code + QR
+                      DepositQrWidget(deposit: _deposit!),
+                      const SizedBox(height: 16),
+                      Text('Client : \\${_deposit!.firstName} \\${_deposit!.lastName}'),
+                      Text('Appareil : \\${_deposit!.deviceType} - \\${_deposit!.brand} \\${_deposit!.model}'),
+                      // Ajoute d'autres infos si besoin
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
