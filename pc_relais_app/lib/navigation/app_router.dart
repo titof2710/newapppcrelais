@@ -11,7 +11,8 @@ import '../screens/client/new_repair_screen.dart';
 import '../screens/client/chat_screen.dart';
 import '../screens/client/profile_screen.dart';
 import '../screens/point_relais/point_relais_home_screen.dart';
-import '../screens/point_relais/relay_repairs_screen.dart';
+import 'package:pc_relais_app/screens/point_relais/relay_repairs_screen.dart';
+import 'package:pc_relais_app/screens/point_relais/point_relais_dashboard.dart';
 import '../screens/point_relais/scan_device_screen.dart';
 import '../screens/point_relais/storage_management_screen.dart';
 import '../screens/point_relais/point_relais_profile_screen.dart';
@@ -157,10 +158,10 @@ class AppRouter {
         navigatorKey: _pointRelaisNavigatorKey,
         builder: (context, state, child) => PointRelaisHomeScreen(child: child),
         routes: [
-          // Page d'accueil point relais
+          // Page d'accueil point relais (obligatoire pour matcher /point_relais)
           GoRoute(
             path: '/point_relais',
-            builder: (context, state) => const PointRelaisHomeContent(),
+            builder: (context, state) => const PointRelaisDashboard(),
           ),
           // Liste des réparations au point relais
           GoRoute(

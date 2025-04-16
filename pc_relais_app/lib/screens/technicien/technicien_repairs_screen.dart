@@ -35,7 +35,7 @@ class _TechnicienRepairsScreenState extends State<TechnicienRepairsScreen> {
       
       setState(() {
         _repairs = [
-          RepairModel(
+          RepairModel(clientEmail: '',
             id: '1001',
             clientId: 'client1',
             clientName: 'Jean Dupont',
@@ -49,7 +49,7 @@ class _TechnicienRepairsScreenState extends State<TechnicienRepairsScreen> {
             estimatedPrice: 150.0,
             createdAt: DateTime.now().subtract(const Duration(days: 5)),
           ),
-          RepairModel(
+          RepairModel(clientEmail: '',
             id: '1002',
             clientId: 'client2',
             clientName: 'Jean Dupont',
@@ -63,7 +63,7 @@ class _TechnicienRepairsScreenState extends State<TechnicienRepairsScreen> {
             estimatedPrice: 80.0,
             createdAt: DateTime.now().subtract(const Duration(days: 2)),
           ),
-          RepairModel(
+          RepairModel(clientEmail: '',
             id: '1003',
             clientId: 'client3',
             clientName: 'Pierre Martin',
@@ -78,7 +78,7 @@ class _TechnicienRepairsScreenState extends State<TechnicienRepairsScreen> {
             estimatedPrice: 200.0,
             createdAt: DateTime.now().subtract(const Duration(days: 7)),
           ),
-          RepairModel(
+          RepairModel(clientEmail: '',
             id: '1004',
             clientId: 'client4',
             clientName: 'Sophie Dubois',

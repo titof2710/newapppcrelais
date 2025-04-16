@@ -38,12 +38,15 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               context.go('/client');
               break;
             case 1:
-              context.go('/client/repairs');
+              context.go('/client/new_repair');
               break;
             case 2:
-              context.go('/client/chat');
+              context.go('/client/repairs');
               break;
             case 3:
+              context.go('/client/chat');
+              break;
+            case 4:
               context.go('/client/profile');
               break;
           }
@@ -53,6 +56,11 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Accueil',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_circle_outline),
+            selectedIcon: Icon(Icons.add_circle),
+            label: 'Déposer',
           ),
           NavigationDestination(
             icon: Icon(Icons.computer_outlined),

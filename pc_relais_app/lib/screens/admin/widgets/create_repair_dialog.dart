@@ -633,6 +633,7 @@ class _CreateRepairDialogState extends State<CreateRepairDialog> {
         
         // Création de la réparation
         final RepairModel newRepair = RepairModel(
+          clientEmail: '',
           id: '',
           clientId: clientId!,
           clientName: clientName!,

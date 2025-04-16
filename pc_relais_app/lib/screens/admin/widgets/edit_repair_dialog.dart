@@ -300,6 +300,7 @@ class _EditRepairDialogState extends State<EditRepairDialog> {
     try {
       // Créer une nouvelle instance avec les valeurs mises à jour
       final updatedRepair = RepairModel(
+        clientEmail: '',
         id: widget.repair.id,
         clientId: widget.repair.clientId,
         clientName: widget.repair.clientName,

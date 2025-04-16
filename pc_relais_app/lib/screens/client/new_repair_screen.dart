@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../models/repair_model.dart';
+import '../../models/deposit_model.dart';
 import '../../models/user_model.dart';
 import '../../models/point_relais_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/repair_service.dart';
+import '../../services/deposit_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../confirmation/repair_qr_confirmation_screen.dart';
 
 class NewRepairScreen extends StatefulWidget {
   const NewRepairScreen({super.key});
@@ -23,6 +27,19 @@ class NewRepairScreen extends StatefulWidget {
 class _NewRepairScreenState extends State<NewRepairScreen> {
   final _formKey = GlobalKey<FormState>();
   final _deviceTypeController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _devicePasswordController = TextEditingController();
+
+  String? _selectedDeviceType;
+  final List<String> _deviceTypes = [
+    'Smartphone',
+    'PC',
+    'Tablette',
+    'Autre',
+  ];
+  bool _showDevicePasswordField = false; // Pour afficher le champ mot de passe selon le type
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
   final _serialNumberController = TextEditingController();
@@ -41,12 +58,14 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
 
   late final AuthService _authService;
   late final RepairService _repairService;
+  late final DepositService _depositService; // Ajouté
 
   @override
   void initState() {
     super.initState();
-    _authService = Provider.of<AuthService>(context, listen: false);
-    _repairService = Provider.of<RepairService>(context, listen: false);
+    _authService = provider.Provider.of<AuthService>(context, listen: false);
+    _repairService = provider.Provider.of<RepairService>(context, listen: false);
+    _depositService = DepositService(Supabase.instance.client); // Utilise le client central
     _loadPointRelais();
   }
   
@@ -127,24 +146,50 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
         throw Exception('Utilisateur non connecté');
       }
 
-      // TODO: Implémenter le téléchargement des images vers Firebase Storage
-      // Pour l'instant, nous allons simplement créer la réparation sans images
-
       // Vérifier qu'un point relais est sélectionné
       if (_selectedPointRelais == null) {
         throw Exception('Veuillez sélectionner un point relais');
       }
       
-      final repair = RepairModel(
+      final deposit = DepositModel(
         clientId: user.id,
-        clientName: user.name,
-        pointRelaisId: _selectedPointRelais!.id, // Ajout de l'ID du point relais
+        firstName: _firstNameController.text,
+        lastName: _lastNameController.text,
+        email: _emailController.text,
+        deviceType: _selectedDeviceType ?? '',
+        brand: _brandController.text,
+        model: _modelController.text,
+        serialNumber: _serialNumberController.text,
+        devicePassword: _devicePasswordController.text,
+        pointRelaisId: _selectedPointRelais!.id,
+        issue: _issueController.text,
+        photoUrls: null, // À compléter si gestion des photos
+      );
+
+      final depositId = await _depositService.createDeposit(deposit);
+
+      // Naviguer vers l'écran de QR code de confirmation après la création
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepairQrConfirmationScreen(repairId: depositId),
+            ),
+          );
+        }
+      });
+      final repair = RepairModel(
+        clientEmail: '',
+        clientId: _authService.currentUser?.uid ?? '',
+        clientName: _firstNameController.text.trim() + ' ' + _lastNameController.text.trim(),
         deviceType: _deviceTypeController.text.trim(),
         brand: _brandController.text.trim(),
         model: _modelController.text.trim(),
         serialNumber: _serialNumberController.text.trim(),
         issue: _issueController.text.trim(),
         status: RepairStatus.waiting_drop,
+        // Ajoute les autres champs requis par RepairModel ici
       );
 
       await _repairService.createRepair(repair);

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'user_model.dart';
 
 /// Modèle représentant un point relais dans l'application
@@ -40,9 +41,26 @@ class PointRelaisModel extends UserModel {
       createdAt: DateTime.parse(json['created_at'] as String),
       shopName: json['shop_name'] as String,
       shopAddress: json['shop_address'] as String,
-      openingHours: json['opening_hours'] != null 
-          ? List<String>.from(json['opening_hours']) 
-          : [],
+      openingHours: (() {
+        final raw = json['opening_hours'];
+        if (raw == null) {
+          return <String>[];
+        } else if (raw is List) {
+          return raw.map((e) => e.toString()).toList();
+        } else if (raw is String) {
+          try {
+            // Peut-être une chaîne JSON
+            final decoded = jsonDecode(raw);
+            if (decoded is List) {
+              return decoded.map((e) => e.toString()).toList();
+            }
+          } catch (_) {}
+          // Sinon, on retourne la chaîne dans une liste
+          return [raw];
+        } else {
+          return <String>[];
+        }
+      })(),
       storageCapacity: json['storage_capacity'] as int? ?? 10,
       currentStorageUsed: json['current_storage_used'] as int? ?? 0,
       pendingRepairIds: json['pending_repair_ids'] != null 

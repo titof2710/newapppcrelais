@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/technicien_model.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
+import 'my_point_relais_screen.dart';
 
 class TechnicienProfileScreen extends StatefulWidget {
   const TechnicienProfileScreen({Key? key}) : super(key: key);
@@ -124,6 +125,24 @@ class _TechnicienProfileScreenState extends State<TechnicienProfileScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.store),
+            label: const Text('Mes points relais'),
+            onPressed: () {
+              if (_technicien != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MyPointRelaisScreen(technicienId: _technicien!.id),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.secondaryColor,
             ),
           ),
         ],

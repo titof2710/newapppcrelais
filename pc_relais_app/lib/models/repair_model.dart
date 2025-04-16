@@ -14,6 +14,7 @@ enum RepairStatus {
 }
 
 class RepairModel {
+  final String clientEmail;
   final String? devicePassword; // Mot de passe de la machine (optionnel)
   final List<String> accessories; // Accessoires fournis (ex: chargeur, câble, sacoche, etc.)
   final List<String> visualState; // État visuel à l'arrivée (ex: rayures, écran cassé, etc.)
@@ -39,6 +40,7 @@ class RepairModel {
 
   RepairModel({
     String? id,
+    required this.clientEmail,
     this.devicePassword,
     this.accessories = const [],
     this.visualState = const [],
@@ -88,7 +90,9 @@ class RepairModel {
     }
     
     return RepairModel(
+      clientEmail: json['client_email'] as String? ?? '',
       devicePassword: json['device_password'] as String?,
+
       accessories: safeListFromJson(json['accessories']),
       visualState: safeListFromJson(json['visual_state']),
       id: json['id'] as String,
@@ -129,6 +133,7 @@ class RepairModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      
       'client_id': clientId,
       'client_name': clientName,
       'point_relais_id': pointRelaisId,
@@ -179,28 +184,29 @@ class RepairModel {
     String? devicePassword,
   }) {
     return RepairModel(
-      id: id ?? this.id,
-      clientId: clientId ?? this.clientId,
-      clientName: clientName ?? this.clientName,
-      pointRelaisId: pointRelaisId ?? this.pointRelaisId,
-      technicienId: technicienId ?? this.technicienId,
-      deviceType: deviceType ?? this.deviceType,
-      brand: brand ?? this.brand,
-      model: model ?? this.model,
-      serialNumber: serialNumber ?? this.serialNumber,
-      issue: issue ?? this.issue,
-      photos: photos ?? this.photos,
-      status: status ?? this.status,
-      createdAt: createdAt ?? this.createdAt,
+      clientEmail: clientEmail ?? this.clientEmail ?? '',
+      id: id ?? this.id ?? '',
+      clientId: clientId ?? this.clientId ?? '',
+      clientName: clientName ?? this.clientName ?? '',
+      pointRelaisId: pointRelaisId ?? this.pointRelaisId ?? '',
+      technicienId: technicienId ?? this.technicienId ?? '',
+      deviceType: deviceType ?? this.deviceType ?? '',
+      brand: brand ?? this.brand ?? '',
+      model: model ?? this.model ?? '',
+      serialNumber: serialNumber ?? this.serialNumber ?? '',
+      issue: issue ?? this.issue ?? '',
+      photos: photos ?? this.photos ?? const [],
+      status: status ?? this.status ?? RepairStatus.pending,
+      createdAt: createdAt ?? this.createdAt ?? DateTime.now(),
       updatedAt: updatedAt ?? this.updatedAt,
       estimatedCompletionDate: estimatedCompletionDate ?? this.estimatedCompletionDate,
       estimatedPrice: estimatedPrice ?? this.estimatedPrice,
-      isPaid: isPaid ?? this.isPaid,
-      notes: notes ?? this.notes,
-      tasks: tasks ?? this.tasks,
+      isPaid: isPaid ?? this.isPaid ?? false,
+      notes: notes ?? this.notes ?? const [],
+      tasks: tasks ?? this.tasks ?? const [],
       devicePassword: devicePassword ?? this.devicePassword,
-      accessories: accessories ?? this.accessories,
-      visualState: visualState ?? this.visualState,
+      accessories: accessories ?? this.accessories ?? const [],
+      visualState: visualState ?? this.visualState ?? const [],
     );
   }
 }
@@ -241,6 +247,7 @@ class RepairNote {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      
       'authorId': authorId,
       'authorName': authorName,
       'authorType': authorType,
@@ -284,6 +291,7 @@ class RepairTask {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      
       'title': title,
       'description': description,
       'isCompleted': isCompleted,

@@ -58,6 +58,7 @@ class _TechnicienNewRepairScreenState extends State<TechnicienNewRepairScreen> {
       }
 
       final repair = RepairModel(
+        clientEmail: '',
         id: '', // Sera généré par le service
         clientId: _clientIdController.text,
         clientName: _clientNameController.text,

@@ -74,17 +74,20 @@ class RepairService {
   Future<RepairModel> getRepairById(String repairId) async {
     try {
       final response = await _supabaseService.client
-          .from(SupabaseConfig.repairsTable)
-          .select()
-          .eq('id', repairId)
-          .single()
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Réparation introuvable: ${SupabaseHelper.getErrorMessage(response)}');
-      }
+        .from(SupabaseConfig.repairsTable)
+        .select()
+        .eq('id', repairId)
+        .maybeSingle()
+        .execute();
+    
+    if (SupabaseHelper.hasError(response)) {
+      throw Exception('Erreur lors de la récupération de la réparation: ${SupabaseHelper.getErrorMessage(response)}');
+    }
+    if (response.data == null) {
+      throw Exception("Aucune réparation trouvée pour cet identifiant.");
+    }
 
-      return RepairModel.fromJson(response.data as Map<String, dynamic>);
+    return RepairModel.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Erreur lors de la récupération de la réparation: $e');
     }

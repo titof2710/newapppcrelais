@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
+import '../technicien/technicien_affectation_screen.dart';
 import '../../models/admin_model.dart';
 import '../../models/point_relais_model.dart';
 import '../../models/technicien_model.dart';
@@ -223,6 +224,19 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (user.userType == 'technicien')
+              IconButton(
+                icon: const Icon(Icons.link),
+                tooltip: 'Affecter à des points relais',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TechnicienAffectationScreen(technicien: user),
+                    ),
+                  );
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
