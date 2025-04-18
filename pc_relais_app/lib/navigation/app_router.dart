@@ -51,7 +51,7 @@ class AppRouter {
 
       // Si l'utilisateur n'est pas connecté et ne va pas vers login/register/splash
       if (!isLoggedIn && !isGoingToLogin && !isGoingToRegister && !isGoingSplash) {
-        return '/';
+        return '/login';
       }
 
       // Si l'utilisateur est connecté et va vers login/register
@@ -120,6 +120,41 @@ class AppRouter {
           GoRoute(
             path: '/client/repairs',
             builder: (context, state) => const RepairListScreen(),
+            routes: [
+              GoRoute(
+                path: ':repairId',
+                builder: (context, state) {
+                  final repairId = state.pathParameters['repairId']!;
+                  return RepairDetailScreen(repairId: repairId, isPointRelais: false, isTechnicien: false);
+                },
+              ),
+              // Protection de la création de réparation pour les clients
+              GoRoute(
+                path: 'new',
+                builder: (context, state) {
+                  final authService = Provider.of<AuthService>(context, listen: false);
+                  return FutureBuilder(
+                    future: authService.getUserType(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                      }
+                      final userType = snapshot.data;
+                      if (userType == 'technicien' || userType == 'admin') {
+                        // Ici tu pourrais mettre un écran de création admin/tech si besoin
+                        return const Scaffold(body: Center(child: Text('Écran de création réservé aux techniciens/admins')));
+                      } else {
+                        // Redirige immédiatement vers la liste si client
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          context.go('/client/repairs');
+                        });
+                        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
           ),
           // Nouvelle demande de réparation
           GoRoute(

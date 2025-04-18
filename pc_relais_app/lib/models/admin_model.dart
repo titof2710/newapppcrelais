@@ -6,7 +6,7 @@ class AdminModel extends UserModel {
   final String role;
 
   AdminModel({
-    required String id,
+    required String uuid,
     required String email,
     required String name,
     required String phoneNumber,
@@ -16,7 +16,7 @@ class AdminModel extends UserModel {
     this.permissions = const [],
     this.role = 'admin',
   }) : super(
-          id: id,
+          uuid: uuid,
           email: email,
           name: name,
           phoneNumber: phoneNumber,
@@ -56,11 +56,11 @@ class AdminModel extends UserModel {
     }
     
     return AdminModel(
-      id: json['id'] as String,
+      uuid: json['uuid'] as String,
       email: json['email'] as String,
       name: name,
       phoneNumber: phoneNumber,
-      profileImageUrl: json['profile_image_url'] as String?,
+      profileImageUrl: json['profile_image'] as String?,
       address: json['address'] as String?,
       createdAt: createdAt,
       permissions: json['permissions'] != null ? List<String>.from(json['permissions']) : [],
@@ -78,7 +78,7 @@ class AdminModel extends UserModel {
 
   @override
   AdminModel copyWith({
-    String? id,
+
     String? email,
     String? name,
     String? phoneNumber,
@@ -90,7 +90,8 @@ class AdminModel extends UserModel {
     String? role,
   }) {
     return AdminModel(
-      id: id ?? this.id,
+
+      uuid: uuid ?? this.uuid,
       email: email ?? this.email,
       name: name ?? this.name,
       phoneNumber: phoneNumber ?? this.phoneNumber,

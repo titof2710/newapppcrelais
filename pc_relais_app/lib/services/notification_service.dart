@@ -1,8 +1,33 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
+import 'auth_service.dart';
 
 class NotificationService {
+  /// Initialise l'écoute automatique du refresh FCM et met à jour Supabase si connecté
+  void listenAndSyncTokenToSupabase(AuthService authService) {
+    _firebaseMessaging.onTokenRefresh.listen((newToken) async {
+      final user = authService.currentUser;
+      if (user != null) {
+        try {
+          await authService.updateUserFcmToken(user.uuid, newToken);
+        } catch (e) {
+          print('Erreur lors de la synchro auto du token FCM: $e');
+        }
+      }
+    });
+  }
+
+  /// Retourne le token FCM courant (ou le récupère si besoin)
+  Future<String?> getToken() async {
+    try {
+      return await _firebaseMessaging.getToken();
+    } catch (e) {
+      print('Erreur lors de la récupération du token FCM: $e');
+      return null;
+    }
+  }
+
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = 
       FlutterLocalNotificationsPlugin();

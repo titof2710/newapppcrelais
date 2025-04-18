@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
+import 'safe_list_from_json.dart';
+import 'safe_list_from_json_generic.dart';
 
 enum RepairStatus {
   pending,           // En attente
@@ -63,31 +65,16 @@ class RepairModel {
     this.notes = const [],
     this.tasks = const [],
   }) : 
-    this.id = id ?? const Uuid().v4(),
+    this.id = id != null && RepairModel._isValidUuid(id) ? id : const Uuid().v4(),
     this.createdAt = createdAt ?? DateTime.now();
 
+  static bool _isValidUuid(String? value) {
+    if (value == null) return false;
+    final uuidRegExp = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    return uuidRegExp.hasMatch(value);
+  }
+
   factory RepairModel.fromJson(Map<String, dynamic> json) {
-    // Fonction pour convertir en toute sécurité un champ en List<String>
-    List<String> safeListFromJson(dynamic value) {
-      if (value == null) return [];
-      if (value is List) return List<String>.from(value);
-      if (value is String) {
-        // Si c'est une chaîne qui ressemble à une liste JSON
-        if (value.startsWith('[') && value.endsWith(']')) {
-          try {
-            // Tenter de parser la chaîne comme JSON
-            final List<dynamic> parsed = jsonDecode(value);
-            return List<String>.from(parsed);
-          } catch (e) {
-            print('Erreur lors du parsing de la liste: $e');
-            return [];
-          }
-        }
-        // Si c'est juste une chaîne, la retourner comme élément unique
-        return [value];
-      }
-      return [];
-    }
     
     return RepairModel(
       clientEmail: json['client_email'] as String? ?? '',
@@ -119,14 +106,8 @@ class RepairModel {
         : null,
       estimatedPrice: json['estimated_price'] as double?,
       isPaid: json['is_paid'] as bool? ?? false,
-      notes: json['notes'] != null 
-        ? List<RepairNote>.from(
-            (json['notes'] as List).map((x) => RepairNote.fromJson(x)))
-        : [],
-      tasks: json['tasks'] != null 
-        ? List<RepairTask>.from(
-            (json['tasks'] as List).map((x) => RepairTask.fromJson(x)))
-        : [],
+      notes: safeListFromJsonGeneric(json['notes'], (x) => RepairNote.fromJson(x)),
+      tasks: safeListFromJsonGeneric(json['tasks'], (x) => RepairTask.fromJson(x)),
     );
   }
 
@@ -229,8 +210,14 @@ class RepairNote {
     DateTime? createdAt,
     this.isPrivate = false,
   }) : 
-    this.id = id ?? const Uuid().v4(),
+    this.id = id != null && RepairModel._isValidUuid(id) ? id : const Uuid().v4(),
     this.createdAt = createdAt ?? DateTime.now();
+
+  static bool _isValidUuid(String? value) {
+    if (value == null) return false;
+    final uuidRegExp = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    return uuidRegExp.hasMatch(value);
+  }
 
   factory RepairNote.fromJson(Map<String, dynamic> json) {
     return RepairNote(

@@ -967,7 +967,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                   // Variable pour suivre si le contexte est monté
                   
                   
-                  await _adminService.deleteUser(user.id);
+                  await _adminService.deleteUser(user.uuid);
                   
                   // Recharger la liste des utilisateurs
                   await _loadUsers();

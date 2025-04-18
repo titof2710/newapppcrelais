@@ -301,7 +301,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: Colors.blueGrey,
+                  
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final month = _getMonthName(groupIndex + 1);
                     return BarTooltipItem(
@@ -319,7 +319,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     getTitlesWidget: (value, meta) {
                       final month = value.toInt() + 1;
                       return SideTitleWidget(
-                        axisSide: meta.axisSide,
+  meta: meta,
+                        
                         child: Text(
                           _getMonthAbbreviation(month),
                           style: const TextStyle(fontSize: 10),
@@ -335,13 +336,15 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     reservedSize: 40,
                     getTitlesWidget: (value, meta) {
                       if (value == 0) {
-                        return const SideTitleWidget(
-                          axisSide: AxisSide.left,
+                        return SideTitleWidget(
+  meta: meta,
+                          
                           child: Text('0'),
                         );
                       }
                       return SideTitleWidget(
-                        axisSide: meta.axisSide,
+  meta: meta,
+                        
                         child: Text(value.toInt().toString()),
                       );
                     },

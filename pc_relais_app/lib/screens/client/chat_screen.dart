@@ -55,7 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
         throw Exception('Utilisateur non connecté');
       }
       
-      _currentUserId = user.id;
+      _currentUserId = user.uuid;
       _currentUserName = user.name;
       _currentUserType = user.userType;
       

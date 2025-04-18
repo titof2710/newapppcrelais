@@ -2,6 +2,7 @@
 class SupabaseConfig {
   // URL de votre projet Supabase
   static const String supabaseUrl = 'https://tltexlhwygkssvxtmszk.supabase.co';
+  static const String depositsTable = 'deposits';
   
   // Clé API publique de votre projet Supabase
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsdGV4bGh3eWdrc3N2eHRtc3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxMjQ1NjYsImV4cCI6MjA1OTcwMDU2Nn0.qZgAxSTBIxysFFekqvRYm5kn0furM5CmbAsqpik7-j8';

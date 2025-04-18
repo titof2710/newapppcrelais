@@ -280,7 +280,7 @@ class _PointRelaisHomeContentState extends State<PointRelaisHomeContent> {
                   
                   // Liste des arrivées imminentes - chargées dynamiquement
                   FutureBuilder<List<RepairModel>>(
-                    future: Provider.of<RepairService>(context).getRepairsForPointRelais(user.id, status: RepairStatus.waiting_drop),
+                    future: Provider.of<RepairService>(context).getRepairsForPointRelais(user.uuid, status: RepairStatus.waiting_drop),
                     builder: (context, arrivalsSnapshot) {
                       if (arrivalsSnapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -338,7 +338,7 @@ class _PointRelaisHomeContentState extends State<PointRelaisHomeContent> {
                   
                   // Liste des appareils prêts - chargés dynamiquement
                   FutureBuilder<List<RepairModel>>(
-                    future: Provider.of<RepairService>(context).getRepairsForPointRelais(user.id, status: RepairStatus.ready_for_pickup),
+                    future: Provider.of<RepairService>(context).getRepairsForPointRelais(user.uuid, status: RepairStatus.ready_for_pickup),
                     builder: (context, readySnapshot) {
                       if (readySnapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());

@@ -66,7 +66,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         print('Erreur lors de la récupération des données admin: $e');
         // Créer un modèle admin basique
         adminData = AdminModel(
-          id: currentUser.uid,
+          uuid: currentUser.uuid,
+          // uuid inconnu ici, à ajuster si possible
           email: currentUser.email ?? 'admin@pcrelais.com',
           name: 'Administrateur',
           phoneNumber: '',
@@ -108,6 +109,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
   
+  // Méthodes de construction de l'UI
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../theme/app_theme.dart';
@@ -64,7 +65,7 @@ class _RegisterPointRelaisScreenState extends State<RegisterPointRelaisScreen> {
       // Convertir la capacité de stockage en entier
       final storageCapacity = int.tryParse(_storageCapacityController.text) ?? 10;
       
-      await authService.registerPointRelais(
+      final pointRelais = await authService.registerPointRelais(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
@@ -72,16 +73,14 @@ class _RegisterPointRelaisScreenState extends State<RegisterPointRelaisScreen> {
         shopName: _shopNameController.text.trim(),
         shopAddress: _shopAddressController.text.trim(),
         openingHours: openingHours,
-        storageCapacity: storageCapacity,
+        storageCapacity: int.tryParse(_storageCapacityController.text.trim()) ?? 0,
       );
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Inscription réussie !'),
-            backgroundColor: Colors.green,
-          ),
-        );
+
+      // Récupérer le token FCM et le stocker dans Supabase
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      final fcmToken = await notificationService.getToken();
+      if (fcmToken != null) {
+        await authService.updateUserFcmToken(pointRelais.uuid, fcmToken);
         
         // Rediriger vers la page d'accueil du point relais
         Navigator.of(context).pushReplacementNamed('/point_relais');
@@ -147,7 +146,7 @@ class _RegisterPointRelaisScreenState extends State<RegisterPointRelaisScreen> {
               
               // Sous-titre
               const Text(
-                'Devenez un partenaire PC Relais et générez des revenus supplémentaires',
+                'Devenez un point relais partenaire (tabac, restaurant, supérette, librairie, etc.) et générez des revenus supplémentaires',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppTheme.textSecondaryColor,
@@ -159,7 +158,7 @@ class _RegisterPointRelaisScreenState extends State<RegisterPointRelaisScreen> {
               
               // Section des informations du commerce
               const Text(
-                'Informations du commerce',
+                'Informations du commerce (tout type de commerce)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

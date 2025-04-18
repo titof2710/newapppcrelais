@@ -165,7 +165,7 @@ class ChatService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.conversationsTable)
           .insert(conversation.toJson())
-          .execute();
+          ;
           
       if (response.hasError) {
         throw Exception('Erreur lors de la création de la conversation: ${response.error!.message}');
@@ -197,7 +197,7 @@ class ChatService {
       final msgResponse = await _supabaseService.client
           .from(SupabaseConfig.messagesTable)
           .insert(messageData)
-          .execute();
+          ;
           
       if (msgResponse.hasError) {
         throw Exception('Erreur lors de l\'envoi du message: ${msgResponse.error!.message}');
@@ -209,7 +209,7 @@ class ChatService {
           .select()
           .eq('id', conversationId)
           .single()
-          .execute();
+          ;
       
       if (getConvResponse.hasError) {
         throw Exception('Conversation introuvable: ${getConvResponse.error!.message}');
@@ -233,7 +233,7 @@ class ChatService {
             'unreadCounts': updatedUnreadCounts,
           })
           .eq('id', conversationId)
-          .execute();
+          ;
           
       if (updateConvResponse.hasError) {
         throw Exception('Erreur lors de la mise à jour de la conversation: ${updateConvResponse.error!.message}');
@@ -257,7 +257,7 @@ class ChatService {
           .select()
           .eq('id', conversationId)
           .single()
-          .execute();
+          ;
       
       if (getConvResponse.hasError) {
         throw Exception('Conversation introuvable: ${getConvResponse.error!.message}');
@@ -281,7 +281,7 @@ class ChatService {
             'unreadCounts': updatedUnreadCounts,
           })
           .eq('id', conversationId)
-          .execute();
+          ;
           
       if (updateConvResponse.hasError) {
         throw Exception('Erreur lors de la mise à jour de la conversation: ${updateConvResponse.error!.message}');
@@ -294,7 +294,7 @@ class ChatService {
           .eq('conversationId', conversationId)
           .eq('isRead', false)
           .neq('senderId', currentUser.uid)
-          .execute();
+          ;
       
       if (updateMsgResponse.hasError) {
         throw Exception('Erreur lors de la mise à jour des messages: ${updateMsgResponse.error!.message}');
@@ -312,7 +312,7 @@ class ChatService {
           .select()
           .eq('id', conversationId)
           .single()
-          .execute();
+          ;
       
       if (response.hasError) {
         throw Exception('Conversation introuvable: ${response.error!.message}');
@@ -339,7 +339,7 @@ class ChatService {
           .from(SupabaseConfig.conversationsTable)
           .select()
           .order('lastMessageAt', ascending: false)
-          .execute();
+          ;
 
       if (response.hasError) {
         throw Exception('Erreur lors de la récupération des conversations: ${response.error!.message}');
@@ -370,19 +370,12 @@ class ChatService {
         throw Exception('Vous n\'êtes pas autorisé à accéder à cette conversation');
       }
 
-      final response = await _supabaseService.client
+      final data = await _supabaseService.client
           .from(SupabaseConfig.messagesTable)
           .select()
           .eq('conversationId', conversationId)
-          .order('timestamp', ascending: false)
-          .execute();
-
-      if (response.hasError) {
-        throw Exception('Erreur lors de la récupération des messages: ${response.error!.message}');
-      }
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data
+          .order('timestamp', ascending: false);
+      return (data as List)
           .map((item) => ChatMessage.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {

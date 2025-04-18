@@ -60,9 +60,9 @@ class _TechnicienNewRepairScreenState extends State<TechnicienNewRepairScreen> {
       final repair = RepairModel(
         clientEmail: '',
         id: '', // Sera généré par le service
-        clientId: _clientIdController.text,
+        clientId: _clientIdController.text, // Doit contenir un UUID (à vérifier lors de la saisie ou récupération du client)
         clientName: _clientNameController.text,
-        technicienId: currentUser.id,
+        technicienId: currentUser.uuid,
         deviceType: _deviceTypeController.text,
         brand: _brandController.text,
         model: _modelController.text,

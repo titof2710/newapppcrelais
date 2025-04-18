@@ -42,7 +42,7 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
         _pointRelais = user;
         
         // Charger les réparations stockées au point relais
-        final repairs = await repairService.getRepairsForPointRelais(user.id);
+        final repairs = await repairService.getRepairsForPointRelais(user.uuid);
         _storedDevices = repairs.where((repair) => 
           repair.status == 'waiting_repair' || 
           repair.status == 'ready_for_pickup').toList();
@@ -314,8 +314,7 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
   }
   
   Widget _buildDeviceCard(RepairModel repair) {
-  // On suppose que le RepairModel a un champ depositId (sinon à adapter)
-  DepositModel? deposit = repair.deposit;
+  // TODO: Pour afficher le QR code du dépôt, il faut relier RepairModel à DepositModel et récupérer le code ici.
 
     // Déterminer l'icône et la couleur en fonction du statut
     IconData statusIcon;
@@ -448,10 +447,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                           textStyle: const TextStyle(fontSize: 12),
                         ),
                       ),
-                    if (deposit != null && deposit.code.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      DepositQrWidget(deposit: deposit),
-                    ],
+                    // TODO: Affichage QR code dépôt : à activer si RepairModel est lié à DepositModel.
+                    // Actuellement désactivé car RepairModel n'a pas de champ deposit/code.
+
                     if (repair.status == 'waiting_repair')
                       ElevatedButton.icon(
                         onPressed: () {

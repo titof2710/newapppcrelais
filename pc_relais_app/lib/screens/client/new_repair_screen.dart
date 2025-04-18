@@ -10,11 +10,13 @@ import '../../models/point_relais_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/repair_service.dart';
 import '../../services/deposit_service.dart';
+import '../../services/storage_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../confirmation/repair_qr_confirmation_screen.dart';
 
 class NewRepairScreen extends StatefulWidget {
@@ -31,6 +33,15 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _devicePasswordController = TextEditingController();
+
+  // Nouveaux contrôleurs et variables pour les champs ajoutés
+  String? _selectedOS;
+  final List<String> _osList = [
+    'Windows', 'MacOS', 'Linux', 'Android', 'iOS', 'Autre'
+  ];
+  final _accessoriesController = TextEditingController();
+  final _notesController = TextEditingController();
+  DateTime _depositDate = DateTime.now();
 
   String? _selectedDeviceType;
   final List<String> _deviceTypes = [
@@ -132,17 +143,25 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
   }
 
   Future<void> _submitRepair() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() { _isLoading = true; });
     try {
-      final user = await _authService.getCurrentUserData();
-      if (user == null) {
+      // Authentification utilisateur (pour lier les photos à l'utilisateur)
+      final user = Supabase.instance.client.auth.currentUser;
+      final userId = user?.id ?? 'anonymous';
+      final storageService = StorageService(client: Supabase.instance.client);
+      List<String> uploadedPhotoUrls = [];
+      for (var image in _selectedImages) {
+        final url = await storageService.uploadImage(image, userId);
+        uploadedPhotoUrls.add(url);
+      }
+
+      if (!_formKey.currentState!.validate()) {
+        setState(() { _isLoading = false; });
+        return;
+      }
+
+      final userData = await _authService.getCurrentUserData();
+      if (userData == null) {
         throw Exception('Utilisateur non connecté');
       }
 
@@ -151,8 +170,10 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
         throw Exception('Veuillez sélectionner un point relais');
       }
       
+      final isUuid = DepositModel.isValidUuid(userData.uuid);
       final deposit = DepositModel(
-        clientId: user.id,
+        clientId: isUuid ? userData.uuid : null,
+        firebaseClientId: !isUuid ? userData.uuid : null,
         firstName: _firstNameController.text,
         lastName: _lastNameController.text,
         email: _emailController.text,
@@ -161,9 +182,13 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
         model: _modelController.text,
         serialNumber: _serialNumberController.text,
         devicePassword: _devicePasswordController.text,
-        pointRelaisId: _selectedPointRelais!.id,
+        os: _selectedOS ?? '',
+        accessories: _accessoriesController.text,
+        notes: _notesController.text,
+        depositDate: _depositDate,
+        pointRelaisId: _selectedPointRelais!.uuid,
         issue: _issueController.text,
-        photoUrls: null, // À compléter si gestion des photos
+        photoUrls: uploadedPhotoUrls,
       );
 
       final depositId = await _depositService.createDeposit(deposit);
@@ -181,7 +206,7 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
       });
       final repair = RepairModel(
         clientEmail: '',
-        clientId: _authService.currentUser?.uid ?? '',
+        clientId: userData.uuid,
         clientName: _firstNameController.text.trim() + ' ' + _lastNameController.text.trim(),
         deviceType: _deviceTypeController.text.trim(),
         brand: _brandController.text.trim(),
@@ -213,11 +238,7 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() { _isLoading = false; });
     }
   }
 
@@ -310,56 +331,108 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          CustomTextField(
-            controller: _deviceTypeController,
-            label: 'Type d\'appareil',
-            hint: 'PC Portable, PC Fixe, etc.',
-            prefixIcon: const Icon(Icons.computer),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Veuillez indiquer le type d\'appareil';
-              }
-              return null;
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Type d\'appareil *',
+              border: OutlineInputBorder(),
+            ),
+            value: _selectedDeviceType,
+            items: _deviceTypes.map((String type) {
+              return DropdownMenuItem<String>(
+                value: type,
+                child: Text(type),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedDeviceType = newValue;
+                _showDevicePasswordField = newValue == 'PC' || newValue == 'Smartphone' || newValue == 'Tablette';
+              });
             },
+            validator: (value) => value == null || value.isEmpty
+                ? 'Veuillez sélectionner un type d\'appareil'
+                : null,
           ),
           const SizedBox(height: 16),
           CustomTextField(
             controller: _brandController,
-            label: 'Marque',
-            hint: 'HP, Dell, Asus, etc.',
-            prefixIcon: const Icon(Icons.business),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Veuillez indiquer la marque';
-              }
-              return null;
-            },
+            label: 'Marque *',
+            validator: Validators.notEmpty,
           ),
           const SizedBox(height: 16),
           CustomTextField(
             controller: _modelController,
-            label: 'Modèle',
-            hint: 'Pavilion, XPS, ROG, etc.',
-            prefixIcon: const Icon(Icons.laptop),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Veuillez indiquer le modèle';
-              }
-              return null;
-            },
+            label: 'Modèle *',
+            validator: Validators.notEmpty,
           ),
           const SizedBox(height: 16),
           CustomTextField(
             controller: _serialNumberController,
-            label: 'Numéro de série (optionnel)',
-            hint: 'Généralement sous l\'appareil ou dans les paramètres système',
-            prefixIcon: const Icon(Icons.numbers),
+            label: 'Numéro de série',
           ),
-          const SizedBox(height: 24),
-          
-          // Section de sélection du point relais
+          if (_showDevicePasswordField) ...[
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _devicePasswordController,
+              label: 'Mot de passe de l\'appareil (si applicable)',
+              obscureText: true,
+            ),
+          ],
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Système d\'exploitation',
+              border: OutlineInputBorder(),
+            ),
+            value: _selectedOS,
+            items: _osList.map((String os) {
+              return DropdownMenuItem<String>(
+                value: os,
+                child: Text(os),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedOS = newValue;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _accessoriesController,
+            label: 'Accessoires fournis',
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
           const Text(
-            'Point relais pour le dépôt',
+            'Informations personnelles',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _firstNameController,
+            label: 'Prénom *',
+            validator: Validators.notEmpty,
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _lastNameController,
+            label: 'Nom *',
+            validator: Validators.notEmpty,
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _emailController,
+            label: 'Email *',
+            validator: Validators.email,
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Point relais',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -369,55 +442,30 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
           _loadingPointRelais
               ? const Center(child: CircularProgressIndicator())
               : _pointRelaisList.isEmpty
-                  ? const Text('Aucun point relais disponible dans votre région')
+                  ? const Text('Aucun point relais disponible')
                   : DropdownButtonFormField<PointRelaisModel>(
                       decoration: const InputDecoration(
+                        labelText: 'Point relais *',
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.store),
-                        labelText: 'Choisir un point relais',
                       ),
                       value: _selectedPointRelais,
-                      items: _pointRelaisList.map((pointRelais) {
+                      items: _pointRelaisList.map((PointRelaisModel pr) {
                         return DropdownMenuItem<PointRelaisModel>(
-                          value: pointRelais,
-                          child: Text(pointRelais.shopName),
+                          value: pr,
+                          child: Text(pr.address != null && pr.address!.isNotEmpty
+                              ? '${pr.name} - ${pr.address}'
+                              : pr.name),
                         );
                       }).toList(),
-                      onChanged: (value) {
+                      onChanged: (PointRelaisModel? newValue) {
                         setState(() {
-                          _selectedPointRelais = value;
+                          _selectedPointRelais = newValue;
                         });
                       },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Veuillez sélectionner un point relais';
-                        }
-                        return null;
-                      },
+                      validator: (value) => value == null
+                          ? 'Veuillez sélectionner un point relais'
+                          : null,
                     ),
-          const SizedBox(height: 16),
-          if (_selectedPointRelais != null) ...[  
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Informations sur le point relais',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Adresse: ${_selectedPointRelais!.shopAddress}'),
-                    Text('Horaires: ${_selectedPointRelais!.openingHours.join(', ')}'),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -437,23 +485,17 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
         const SizedBox(height: 16),
         CustomTextField(
           controller: _issueController,
-          label: 'Problème rencontré',
-          hint: 'Décrivez en détail le problème que vous rencontrez avec votre appareil',
-          prefixIcon: const Icon(Icons.error_outline),
+          label: 'Décrivez le problème en détail *',
           maxLines: 5,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Veuillez décrire le problème';
-            }
-            if (value.length < 10) {
-              return 'Veuillez fournir une description plus détaillée';
-            }
-            return null;
-          },
+          validator: Validators.notEmpty,
         ),
         const SizedBox(height: 16),
+        CustomTextField(
+          controller: _notesController,
+          label: 'Notes additionnelles',
+          maxLines: 3,
+        ),
+        const SizedBox(height: 24),
         const Card(
           child: Padding(
             padding: EdgeInsets.all(16.0),
@@ -461,7 +503,7 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Conseils pour une bonne description',
+                  'Conseils pour une description efficace',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -469,16 +511,16 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  '• Soyez précis sur les symptômes (écran noir, bruit anormal, etc.)',
+                  '• Soyez précis sur les symptômes du problème',
                 ),
                 Text(
-                  '• Indiquez depuis quand le problème existe',
+                  '• Indiquez quand le problème a commencé',
                 ),
                 Text(
-                  '• Mentionnez si le problème est intermittent ou permanent',
+                  '• Mentionnez si le problème est intermittent ou constant',
                 ),
                 Text(
-                  '• Précisez les solutions que vous avez déjà essayées',
+                  '• Décrivez toute tentative de réparation déjà effectuée',
                 ),
               ],
             ),
@@ -501,57 +543,72 @@ class _NewRepairScreenState extends State<NewRepairScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Ajoutez des photos pour aider le technicien à mieux comprendre le problème (optionnel)',
+          'Ajoutez des photos de l\'appareil pour aider nos techniciens à mieux comprendre le problème.',
         ),
         const SizedBox(height: 16),
-        CustomButton(
-          text: 'AJOUTER DES PHOTOS',
-          icon: Icons.photo_library,
-          onPressed: _pickImages,
-          type: ButtonType.outline,
+        Center(
+          child: ElevatedButton.icon(
+            onPressed: _pickImages,
+            icon: const Icon(Icons.add_a_photo),
+            label: const Text('Ajouter des photos'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         if (_selectedImages.isNotEmpty) ...[
+          const Text(
+            'Photos sélectionnées:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
           SizedBox(
             height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _selectedImages.length,
               itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
+                return Stack(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(_selectedImages[index].path),
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                        ),
                       ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () => _removeImage(index),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              shape: BoxShape.circle,
+                      child: kIsWeb
+                          ? Image.network(
+                              _selectedImages[index].path,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.file(
+                              File(_selectedImages[index].path),
+                              fit: BoxFit.cover,
                             ),
-                            child: const Icon(
-                              Icons.close,
-                              size: 16,
-                              color: Colors.white,
-                            ),
+                    ),
+                    Positioned(
+                      top: 5,
+                      right: 13,
+                      child: GestureDetector(
+                        onTap: () => _removeImage(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Colors.white,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 );
               },
             ),

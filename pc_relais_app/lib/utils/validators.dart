@@ -1,4 +1,17 @@
 class Validators {
+  // Validation de champ non vide
+  static String? notEmpty(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Ce champ est requis';
+    }
+    return null;
+  }
+
+  // Alias pour email
+  static String? email(String? value) {
+    return validateEmail(value);
+  }
+
   // Validation d'email
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {

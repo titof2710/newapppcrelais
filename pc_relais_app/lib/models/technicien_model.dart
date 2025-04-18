@@ -1,4 +1,5 @@
 import 'user_model.dart';
+import 'safe_list_from_json.dart';
 
 class TechnicienModel extends UserModel {
   final List<String> speciality;
@@ -7,7 +8,7 @@ class TechnicienModel extends UserModel {
   final List<String> assignedRepairs;
 
   TechnicienModel({
-    required super.id,
+    required super.uuid, // Ajout uuid
     required super.email,
     required super.name,
     required super.phoneNumber,
@@ -22,25 +23,19 @@ class TechnicienModel extends UserModel {
 
   factory TechnicienModel.fromJson(Map<String, dynamic> json) {
     return TechnicienModel(
-      id: json['id'] as String,
+      uuid: json['uuid'] as String,
       email: json['email'] as String,
       name: json['first_name'] != null && json['last_name'] != null
           ? '${json['first_name']} ${json['last_name']}'
           : (json['first_name'] ?? json['last_name'] ?? ''),
       phoneNumber: json['phone'] as String,
-      profileImageUrl: json['profile_image_url'] as String?,
+      profileImageUrl: json['profile_image'] as String?,
       address: json['address'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
-      speciality: json['speciality'] != null 
-          ? List<String>.from(json['speciality']) 
-          : [],
+      speciality: safeListFromJson(json['speciality']),
       experienceYears: json['experience_years'] as int? ?? 0,
-      certifications: json['certifications'] != null 
-          ? List<String>.from(json['certifications']) 
-          : [],
-      assignedRepairs: json['assigned_repairs'] != null 
-          ? List<String>.from(json['assigned_repairs']) 
-          : [],
+      certifications: safeListFromJson(json['certifications']),
+      assignedRepairs: safeListFromJson(json['assigned_repairs']),
     );
   }
 
@@ -56,7 +51,7 @@ class TechnicienModel extends UserModel {
 
   @override
   TechnicienModel copyWith({
-    String? id,
+
     String? email,
     String? name,
     String? phoneNumber,
@@ -70,7 +65,8 @@ class TechnicienModel extends UserModel {
     List<String>? assignedRepairs,
   }) {
     return TechnicienModel(
-      id: id ?? this.id,
+
+      uuid: uuid ?? this.uuid,
       email: email ?? this.email,
       name: name ?? this.name,
       phoneNumber: phoneNumber ?? this.phoneNumber,

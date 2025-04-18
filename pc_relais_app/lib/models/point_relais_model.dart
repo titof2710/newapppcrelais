@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'user_model.dart';
+import 'safe_list_from_json.dart';
 
 /// Modèle représentant un point relais dans l'application
 class PointRelaisModel extends UserModel {
@@ -12,7 +13,7 @@ class PointRelaisModel extends UserModel {
   final List<String> currentRepairIds;
 
   PointRelaisModel({
-    required super.id,
+    required super.uuid, // Ajout uuid
     required super.email,
     required super.name,
     required super.phoneNumber,
@@ -30,13 +31,13 @@ class PointRelaisModel extends UserModel {
 
   factory PointRelaisModel.fromJson(Map<String, dynamic> json) {
     return PointRelaisModel(
-      id: json['id'] as String,
+      uuid: json['uuid'] as String,
       email: json['email'] as String,
       name: json['first_name'] != null && json['last_name'] != null
           ? '${json['first_name']} ${json['last_name']}'
           : (json['first_name'] ?? json['last_name'] ?? ''),
       phoneNumber: json['phone'] as String,
-      profileImageUrl: json['profile_image_url'] as String?,
+      profileImageUrl: json['profile_image'] as String?,
       address: json['address'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       shopName: json['shop_name'] as String,
@@ -63,12 +64,8 @@ class PointRelaisModel extends UserModel {
       })(),
       storageCapacity: json['storage_capacity'] as int? ?? 10,
       currentStorageUsed: json['current_storage_used'] as int? ?? 0,
-      pendingRepairIds: json['pending_repair_ids'] != null 
-          ? List<String>.from(json['pending_repair_ids']) 
-          : [],
-      currentRepairIds: json['current_repair_ids'] != null 
-          ? List<String>.from(json['current_repair_ids']) 
-          : [],
+      pendingRepairIds: safeListFromJson(json['pending_repair_ids']),
+      currentRepairIds: safeListFromJson(json['current_repair_ids']),
     );
   }
 
@@ -87,7 +84,7 @@ class PointRelaisModel extends UserModel {
 
   @override
   PointRelaisModel copyWith({
-    String? id,
+
     String? email,
     String? name,
     String? phoneNumber,
@@ -104,7 +101,8 @@ class PointRelaisModel extends UserModel {
     List<String>? currentRepairIds,
   }) {
     return PointRelaisModel(
-      id: id ?? this.id,
+
+      uuid: uuid ?? this.uuid,
       email: email ?? this.email,
       name: name ?? this.name,
       phoneNumber: phoneNumber ?? this.phoneNumber,

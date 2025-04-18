@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 
 class RegisterClientScreen extends StatefulWidget {
@@ -36,6 +37,17 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
     super.dispose();
   }
 
+  String _formatErrorMessage(Object e) {
+    final msg = e.toString();
+    if (msg.contains('duplicate key value') && msg.contains('users_email_key')) {
+      return 'Cet email est déjà utilisé. Veuillez en choisir un autre.';
+    }
+    if (msg.contains('invalid input syntax for type uuid')) {
+      return "Erreur technique : format d'identifiant invalide. Merci de contacter le support.";
+    }
+    return msg;
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -48,13 +60,20 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.registerClient(
+      final user = await authService.registerClient(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         address: _addressController.text.trim(),
       );
+
+      // Récupérer le token FCM et le stocker dans Supabase
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      final fcmToken = await notificationService.getToken();
+      if (fcmToken != null) {
+        await authService.updateUserFcmToken(user.uuid, fcmToken);
+      }
 
       if (!mounted) return;
 
@@ -70,7 +89,7 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
       context.go('/client');
     } catch (e) {
       setState(() {
-        _errorMessage = 'Échec de l\'inscription: ${e.toString()}';
+        _errorMessage = 'Échec de l\'inscription :\n${_formatErrorMessage(e)}';
       });
     } finally {
       if (mounted) {

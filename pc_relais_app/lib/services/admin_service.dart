@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:uuid/uuid.dart';
 import '../models/admin_model.dart';
 import '../models/user_model.dart';
 import '../models/repair_model.dart';
@@ -26,18 +27,10 @@ class AdminService {
       
       print('isCurrentUserAdmin: Vérification pour l\'utilisateur ${currentUser.uid} (${currentUser.email})');
 
-      final response = await _supabaseService.client
+      final data = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('id', currentUser.uid)
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        print('isCurrentUserAdmin: Erreur Supabase: ${SupabaseHelper.getErrorMessage(response)}');
-        return false;
-      }
-      
-      final List<dynamic> data = response.data as List<dynamic>;
+          .eq('uuid', currentUser.uid);
       if (data.isEmpty) {
         print('isCurrentUserAdmin: Aucun utilisateur trouvé avec cet ID');
         return false;
@@ -66,24 +59,16 @@ class AdminService {
       print('Recherche de l\'utilisateur admin avec ID: ${currentUser.uid}');
       
       // D'abord, vérifions si l'utilisateur existe dans la base de données
-      final userResponse = await _supabaseService.client
+      final data = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('id', currentUser.uid)
-          .execute();
-      
-      if (SupabaseHelper.hasError(userResponse)) {
-        print('Erreur lors de la recherche de l\'utilisateur: ${SupabaseHelper.getErrorMessage(userResponse)}');
-        return null;
-      }
-      
-      if (userResponse.data == null || (userResponse.data as List).isEmpty) {
+          .eq('uuid', currentUser.uid);
+      if (data == null || (data as List).isEmpty) {
         print('Aucun utilisateur trouvé avec cet ID');
         return null;
       }
-      
       // Afficher les données de l'utilisateur pour le débogage
-      final userData = (userResponse.data as List)[0] as Map<String, dynamic>;
+      final userData = (data as List)[0] as Map<String, dynamic>;
       print('Utilisateur trouvé: ${userData['name']}');
       print('Type d\'utilisateur: ${userData['user_type']}');
       
@@ -99,15 +84,15 @@ class AdminService {
       } catch (e) {
         print('Erreur lors de la création du modèle admin: $e');
         // Essayer de créer un modèle admin basique
-        return AdminModel(
-          id: userData['id'] as String,
-          email: userData['email'] as String,
-          name: userData['name'] as String,
-          phoneNumber: userData['phone_number'] as String,
-          createdAt: DateTime.parse(userData['created_at'] as String),
-          permissions: [],
-          role: 'admin',
-        );
+          return AdminModel(
+  uuid: userData['uuid'] as String,
+  email: userData['email'] as String,
+  name: userData['name'] as String,
+  phoneNumber: userData['phone_number'] as String,
+  createdAt: DateTime.parse(userData['created_at'] as String),
+  permissions: [],
+  role: 'admin',
+);
       }
     } catch (e) {
       print('Erreur lors de la récupération des données admin: $e');
@@ -121,19 +106,19 @@ class AdminService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la récupération des utilisateurs: ${SupabaseHelper.getErrorMessage(response)}');
       }
 
-      final List<dynamic> data = response.data as List<dynamic>;
+      final List<dynamic> data = response as List<dynamic>;
       return data.map((userData) {
         final String userType = userData['user_type'] as String;
         switch (userType) {
           case 'client':
             return UserModel.fromJson(userData);
-          case 'point_relais':
+          case 'pointRelais.uuid':
             return UserModel.fromJson(userData);
           case 'admin':
             return AdminModel.fromJson(userData);
@@ -182,7 +167,7 @@ class AdminService {
 
       // Créer le profil admin dans Supabase
       final AdminModel newAdmin = AdminModel(
-        id: user.uid,
+        uuid: const Uuid().v4(),
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -194,12 +179,15 @@ class AdminService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .insert(newAdmin.toJson())
-          .execute();
+          ;
           
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la création du profil admin: ${SupabaseHelper.getErrorMessage(response)}');
       }
 
+      // Reconnexion Firebase pour activer l'administrateur côté Provider
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // (Optionnel) Ajouter ici un refreshCurrentUser si tu utilises un Provider pour l'admin
       return newAdmin;
     } catch (e) {
       throw Exception('Erreur lors de la création de l\'administrateur: $e');
@@ -212,8 +200,8 @@ class AdminService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .update(user.toJson())
-          .eq('id', user.id)
-          .execute();
+          .eq('id', user.uuid)
+          ;
           
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la mise à jour de l\'utilisateur: ${SupabaseHelper.getErrorMessage(response)}');
@@ -231,7 +219,7 @@ class AdminService {
           .from(SupabaseConfig.usersTable)
           .delete()
           .eq('id', userId)
-          .execute();
+          ;
           
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la suppression de l\'utilisateur: ${SupabaseHelper.getErrorMessage(response)}');
@@ -275,7 +263,7 @@ class AdminService {
       
       // Créer le modèle technicien
       final TechnicienModel technicien = TechnicienModel(
-        id: userId,
+        uuid: const Uuid().v4(),
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -291,7 +279,7 @@ class AdminService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .insert(technicien.toJson())
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         // En cas d'erreur, supprimer l'utilisateur Firebase
@@ -330,7 +318,7 @@ class AdminService {
       
       // Créer le modèle client
       final ClientModel client = ClientModel(
-        id: userId,
+        uuid: const Uuid().v4(),
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -353,7 +341,9 @@ class AdminService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .insert(clientJson)
-          .execute();
+          ;
+      print('Réponse Supabase après insertion:');
+      print(response);
       
       if (SupabaseHelper.hasError(response)) {
         // En cas d'erreur, supprimer l'utilisateur Firebase
@@ -394,7 +384,7 @@ class AdminService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.repairsTable)
           .insert(updatedRepair.toJson())
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la création de la réparation: ${SupabaseHelper.getErrorMessage(response)}');
@@ -459,18 +449,11 @@ class AdminService {
   // Récupérer tous les clients
   Future<List<ClientModel>> getAllClients() async {
     try {
-      final response = await _supabaseService.client
+      final data = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('user_type', 'client')
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la récupération des clients: ${SupabaseHelper.getErrorMessage(response)}');
-      }
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data.map((userData) => ClientModel.fromJson(userData)).toList();
+          .eq('user_type', 'client');
+      return (data as List).map((userData) => ClientModel.fromJson(userData)).toList();
     } catch (e) {
       throw Exception('Erreur lors de la récupération des clients: $e');
     }
@@ -485,7 +468,7 @@ class AdminService {
             'table_name': 'repairs',
             'column_name': 'client_name'
           })
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(checkResponse)) {
         print('Erreur lors de la vérification de la colonne: ${SupabaseHelper.getErrorMessage(checkResponse)}');
@@ -505,7 +488,7 @@ class AdminService {
             'column_name': 'client_name',
             'column_type': 'TEXT'
           })
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         print('Erreur lors de l\'ajout de la colonne: ${SupabaseHelper.getErrorMessage(response)}');
@@ -537,16 +520,10 @@ class AdminService {
       print('updateRepair: Mise à jour de la réparation: ${repair.id} pour ${repair.clientName}');
 
       // Mettre à jour la réparation dans Supabase
-      final response = await _supabaseService.client
+      await _supabaseService.client
           .from(SupabaseConfig.repairsTable)
           .update(repair.toJson())
-          .eq('id', repair.id)
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la mise à jour de la réparation: ${SupabaseHelper.getErrorMessage(response)}');
-      }
-      
+          .eq('id', repair.id);
       return repair;
     } catch (e) {
       throw Exception('Erreur lors de la mise à jour de la réparation: $e');

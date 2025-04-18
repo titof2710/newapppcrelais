@@ -144,7 +144,7 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
             'platform': 'web',
             'test': 'Supabase test',
           })
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));

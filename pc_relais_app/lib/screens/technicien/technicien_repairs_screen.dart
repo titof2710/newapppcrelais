@@ -37,7 +37,7 @@ class _TechnicienRepairsScreenState extends State<TechnicienRepairsScreen> {
         _repairs = [
           RepairModel(clientEmail: '',
             id: '1001',
-            clientId: 'client1',
+            clientId: 'uuid-client1',
             clientName: 'Jean Dupont',
             technicienId: 'tech1',
             deviceType: 'Ordinateur portable',
@@ -51,7 +51,7 @@ class _TechnicienRepairsScreenState extends State<TechnicienRepairsScreen> {
           ),
           RepairModel(clientEmail: '',
             id: '1002',
-            clientId: 'client2',
+            clientId: 'uuid-client2',
             clientName: 'Jean Dupont',
             technicienId: 'tech1',
             deviceType: 'Smartphone',

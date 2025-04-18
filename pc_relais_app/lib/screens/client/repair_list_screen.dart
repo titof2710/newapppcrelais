@@ -68,11 +68,12 @@ class _RepairListScreenState extends State<RepairListScreen> {
           : _repairs.isEmpty
               ? _buildEmptyState()
               : _buildRepairList(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/client/repairs/new'),
-        label: const Text('Nouvelle réparation'),
-        icon: const Icon(Icons.add),
-      ),
+      // Suppression du bouton de création de réparation pour les clients
+      // floatingActionButton: FloatingActionButton.extended(
+      //   onPressed: () => context.push('/client/repairs/new'),
+      //   label: const Text('Nouvelle réparation'),
+      //   icon: const Icon(Icons.add),
+      // ),
     );
   }
 
@@ -102,11 +103,12 @@ class _RepairListScreenState extends State<RepairListScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          CustomButton(
-            text: 'NOUVELLE RÉPARATION',
-            icon: Icons.add,
-            onPressed: () => context.push('/client/repairs/new'),
-          ),
+          // Suppression du bouton de création de réparation pour les clients
+          // CustomButton(
+          //   text: 'NOUVELLE RÉPARATION',
+          //   icon: Icons.add,
+          //   onPressed: () => context.push('/client/repairs/new'),
+          // ),
         ],
       ),
     );

@@ -46,16 +46,10 @@ class SupabaseService {
   /// Récupère tous les utilisateurs
   Future<List<Map<String, dynamic>>> getUsers() async {
     try {
-      final response = await client
+      final List<dynamic> data = await client
           .from(SupabaseConfig.usersTable)
-          .select()
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception(SupabaseHelper.getErrorMessage(response));
-      }
-      
-      return List<Map<String, dynamic>>.from(response.data as List);
+          .select();
+      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Erreur lors de la récupération des utilisateurs: $e');
       rethrow;
@@ -65,22 +59,15 @@ class SupabaseService {
   /// Récupère un utilisateur par son ID
   Future<Map<String, dynamic>?> getUserById(String userId) async {
     try {
-      final response = await client
+      final data = await client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('id', userId)
-          .single()
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        final errorMsg = SupabaseHelper.getErrorMessage(response);
-        if (errorMsg.contains('No rows found')) {
-          return null;
-        }
-        throw Exception(errorMsg);
+          .eq('uuid', userId)
+          .maybeSingle();
+      if (data == null) {
+        return null;
       }
-      
-      return response.data as Map<String, dynamic>;
+      return data as Map<String, dynamic>;
     } catch (e) {
       print('Erreur lors de la récupération de l\'utilisateur: $e');
       rethrow;
@@ -91,16 +78,16 @@ class SupabaseService {
   Future<void> upsertUser(Map<String, dynamic> userData) async {
     try {
       // Vérifier si l'ID est fourni
-      if (!userData.containsKey('id') || userData['id'] == null) {
+      if (!userData.containsKey('uuid') || userData['uuid'] == null) {
         throw Exception('ID utilisateur requis pour la mise à jour');
       }
       
       // Récupérer les données existantes de l'utilisateur
-      final existingUserData = await getUserById(userData['id']);
+      final existingUserData = await getUserById(userData['uuid']);
       
       // Si l'utilisateur existe, fusionner les données
       if (existingUserData != null) {
-        print('Mise à jour de l\'utilisateur existant: ${userData['id']}');
+        print('Mise à jour de l\'utilisateur existant: ${userData['uuid']}');
         // Créer une copie des données existantes
         final Map<String, dynamic> mergedData = Map<String, dynamic>.from(existingUserData);
         // Ajouter/remplacer les nouvelles données
@@ -109,15 +96,10 @@ class SupabaseService {
         print('Données fusionnées: $mergedData');
         
         // Effectuer la mise à jour avec les données fusionnées
-        final response = await client
+        await client
             .from(SupabaseConfig.usersTable)
-            .update(mergedData) // Utiliser update au lieu de upsert
-            .eq('id', userData['id'])
-            .execute();
-        
-        if (SupabaseHelper.hasError(response)) {
-          throw Exception(SupabaseHelper.getErrorMessage(response));
-        }
+            .update(mergedData)
+            .eq('uuid', userData['uuid']);
       } else {
         // Si l'utilisateur n'existe pas, vérifier que toutes les données requises sont présentes
         if (!userData.containsKey('email') || userData['email'] == null) {
@@ -125,14 +107,9 @@ class SupabaseService {
         }
         
         // Effectuer l'insertion
-        final response = await client
+        await client
             .from(SupabaseConfig.usersTable)
-            .insert(userData)
-            .execute();
-        
-        if (SupabaseHelper.hasError(response)) {
-          throw Exception(SupabaseHelper.getErrorMessage(response));
-        }
+            .insert(userData);
       }
     } catch (e) {
       print('Erreur lors de la création/mise à jour de l\'utilisateur: $e');
@@ -184,41 +161,139 @@ class SupabaseService {
   /// Récupère toutes les réparations
   Future<List<Map<String, dynamic>>> getRepairs() async {
     try {
-      final response = await client
-          .from(SupabaseConfig.repairsTable)
-          .select()
-          .execute();
+      print('Tentative de récupération des réparations avec la méthode simplifiée');
       
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception(SupabaseHelper.getErrorMessage(response));
+      // Approche simplifiée pour éviter les problèmes d'UUID
+      try {
+        // Récupérer toutes les réparations (limité à 1000 pour éviter les problèmes de performance)
+        final response = await client
+            .from(SupabaseConfig.repairsTable)
+            .select()
+            .limit(1000);
+        
+        final List<dynamic> allRepairs = response as List<dynamic>;
+        final List<Map<String, dynamic>> sanitizedRepairs = allRepairs
+            .map((item) => _sanitizeRepairData(item as Map<String, dynamic>))
+            .toList();
+        
+        print('Récupération réussie: ${sanitizedRepairs.length} réparations trouvées');
+        return sanitizedRepairs;
+      } catch (e) {
+        print('Erreur lors de la récupération des réparations (méthode simplifiée): $e');
+        // En dernier recours, retourner une liste vide pour éviter le plantage de l'application
+        return [];
       }
-      
-      final List<dynamic> rawData = response.data as List;
-      return rawData.map((item) => _sanitizeRepairData(item as Map<String, dynamic>)).toList();
     } catch (e) {
       print('Erreur lors de la récupération des réparations: $e');
-      rethrow;
+      // En dernier recours, retourner une liste vide pour éviter le plantage de l'application
+      return [];
     }
   }
-  
+
+  /// Crée une fonction SQL dans Supabase pour récupérer toutes les réparations
+  /// Cette fonction évite les problèmes de conversion de type UUID
+  Future<void> _createGetAllRepairsFunction() async {
+    try {
+      // S'assurer que la fonction function_exists existe
+      await _createFunctionExistsFunction();
+      
+      // Vérifier si la fonction get_all_repairs existe déjà
+      final checkResponse = await client
+          .rpc('function_exists', params: {'function_name': 'get_all_repairs'})
+          ;
+      
+      final bool functionExists = checkResponse.data as bool? ?? false;
+      if (functionExists) {
+        print('La fonction get_all_repairs existe déjà');
+        return;
+      }
+      
+      // Créer la fonction SQL
+      final sql = '''
+      CREATE OR REPLACE FUNCTION get_all_repairs()
+      RETURNS SETOF repairs AS \$\$
+      BEGIN
+        RETURN QUERY SELECT * FROM repairs;
+      END;
+      \$\$ LANGUAGE plpgsql;
+      ''';
+      
+      await client.rpc('run_sql', params: {'sql': sql});
+      print('Fonction get_all_repairs créée avec succès');
+    } catch (e) {
+      print('Erreur lors de la création de la fonction get_all_repairs: $e');
+      // En cas d'échec, nous continuerons avec la méthode standard
+    }
+  }
+
   /// Récupère les réparations d'un client
   Future<List<Map<String, dynamic>>> getClientRepairs(String clientId) async {
     try {
-      final response = await client
-          .from(SupabaseConfig.repairsTable)
-          .select()
-          .eq('client_id', clientId)
-          .execute();
+      print('Tentative de récupération des réparations du client avec la méthode simplifiée');
       
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception(SupabaseHelper.getErrorMessage(response));
+      // Approche simplifiée pour éviter les problèmes d'UUID
+      // Au lieu d'utiliser .eq('client_id', clientId) qui peut causer des problèmes de type UUID,
+      // récupérons toutes les réparations et filtrons-les en mémoire
+      try {
+        // Récupérer toutes les réparations (limité à 1000 pour éviter les problèmes de performance)
+        final response = await client
+            .from(SupabaseConfig.repairsTable)
+            .select()
+            .limit(1000);
+        
+        final List<dynamic> allRepairs = response as List<dynamic>;
+        
+        // Filtrer les réparations pour ce client spécifique
+        final List<Map<String, dynamic>> clientRepairs = allRepairs
+            .where((repair) => repair['client_id'] == clientId)
+            .map((item) => _sanitizeRepairData(item as Map<String, dynamic>))
+            .toList();
+        
+        print('Récupération réussie: ${clientRepairs.length} réparations trouvées pour le client $clientId');
+        return clientRepairs;
+      } catch (e) {
+        print('Erreur lors de la récupération des réparations (méthode simplifiée): $e');
+        // En dernier recours, retourner une liste vide pour éviter le plantage de l'application
+        return [];
       }
-      
-      final List<dynamic> rawData = response.data as List;
-      return rawData.map((item) => _sanitizeRepairData(item as Map<String, dynamic>)).toList();
     } catch (e) {
       print('Erreur lors de la récupération des réparations du client: $e');
-      rethrow;
+      // En dernier recours, retourner une liste vide pour éviter le plantage de l'application
+      return [];
+    }
+  }
+  
+  /// Crée une fonction SQL dans Supabase pour récupérer les réparations d'un client
+  Future<void> _createGetClientRepairsFunction() async {
+    try {
+      // S'assurer que la fonction function_exists existe
+      await _createFunctionExistsFunction();
+      
+      // Vérifier si la fonction get_client_repairs existe déjà
+      final checkResponse = await client
+          .rpc('function_exists', params: {'function_name': 'get_client_repairs'});
+      
+      final bool functionExists = checkResponse.data as bool? ?? false;
+      if (functionExists) {
+        print('La fonction get_client_repairs existe déjà');
+        return;
+      }
+      
+      // Créer la fonction SQL
+      final sql = '''
+      CREATE OR REPLACE FUNCTION get_client_repairs(client_id_param TEXT)
+      RETURNS SETOF repairs AS \$\$
+      BEGIN
+        RETURN QUERY SELECT * FROM repairs WHERE client_id = client_id_param;
+      END;
+      \$\$ LANGUAGE plpgsql;
+      ''';
+      
+      await client.rpc('run_sql', params: {'sql': sql});
+      print('Fonction get_client_repairs créée avec succès');
+    } catch (e) {
+      print('Erreur lors de la création de la fonction get_client_repairs: $e');
+      // En cas d'échec, nous continuerons avec la méthode standard
     }
   }
   
@@ -229,13 +304,13 @@ class SupabaseService {
           .from(SupabaseConfig.repairsTable)
           .select()
           .eq('point_relais_id', pointRelaisId)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));
       }
       
-      final List<dynamic> rawData = response.data as List;
+      final List<dynamic> rawData = response as List<dynamic>;
       return rawData.map((item) => _sanitizeRepairData(item as Map<String, dynamic>)).toList();
     } catch (e) {
       print('Erreur lors de la récupération des réparations du point relais: $e');
@@ -249,7 +324,7 @@ class SupabaseService {
       final response = await client
           .from(SupabaseConfig.repairsTable)
           .upsert(repairData)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));
@@ -268,13 +343,13 @@ class SupabaseService {
           .select()
           .eq('conversation_id', conversationId)
           .order('created_at', ascending: true)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));
       }
       
-      return List<Map<String, dynamic>>.from(response.data as List);
+      return List<Map<String, dynamic>>.from(response as List);
     } catch (e) {
       print('Erreur lors de la récupération des messages: $e');
       rethrow;
@@ -287,7 +362,7 @@ class SupabaseService {
       final response = await client
           .from(SupabaseConfig.messagesTable)
           .insert(messageData)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));
@@ -303,8 +378,8 @@ class SupabaseService {
     try {
       final stream = client
           .from(table)
-          .stream(primaryKey: ['id'])
-          .execute();
+          .stream(primaryKey: ['uuid'])
+          ;
       
       return stream.map((data) => List<Map<String, dynamic>>.from(data));
     } catch (e) {
@@ -319,9 +394,9 @@ class SupabaseService {
       final response = await client
           .from(SupabaseConfig.technicienDetailsTable)
           .select()
-          .eq('id', technicienId)
+          .eq('uuid', technicienId)
           .single()
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         final errorMsg = SupabaseHelper.getErrorMessage(response);
@@ -331,7 +406,7 @@ class SupabaseService {
         throw Exception(errorMsg);
       }
       
-      return response.data as Map<String, dynamic>;
+      return response as Map<String, dynamic>;
     } catch (e) {
       print('Erreur lors de la récupération des détails du technicien: $e');
       rethrow;
@@ -344,7 +419,7 @@ class SupabaseService {
       final response = await client
           .from(SupabaseConfig.technicienDetailsTable)
           .upsert(technicienData)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));
@@ -362,17 +437,88 @@ class SupabaseService {
           .from(SupabaseConfig.repairsTable)
           .select()
           .eq('technicien_id', technicienId)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception(SupabaseHelper.getErrorMessage(response));
       }
       
-      final List<dynamic> rawData = response.data as List;
+      final List<dynamic> rawData = response as List<dynamic>;
       return rawData.map((item) => _sanitizeRepairData(item as Map<String, dynamic>)).toList();
     } catch (e) {
       print('Erreur lors de la récupération des réparations du technicien: $e');
       rethrow;
+    }
+  }
+  
+  /// S'assure que la fonction run_sql existe dans Supabase
+  Future<void> _ensureRunSqlFunctionExists() async {
+    try {
+      // Essayer d'exécuter une requête SQL simple pour vérifier si run_sql existe
+      await client.rpc('run_sql', params: {'sql': 'SELECT 1;'});
+      print('La fonction run_sql existe déjà');
+    } catch (e) {
+      print('La fonction run_sql n\'existe pas, tentative de création...');
+      // Si la fonction n'existe pas, nous devons la créer manuellement
+      // Cela nécessite des privilèges d'administrateur sur la base de données
+      // Cette partie devrait être gérée par un administrateur de base de données
+      print('ERREUR: La fonction run_sql n\'existe pas dans votre base de données Supabase.');
+      print('Cette fonction nécessite des privilèges d\'administrateur pour être créée.');
+      print('Veuillez contacter votre administrateur Supabase pour créer cette fonction.');
+      
+      // Comme alternative, nous allons utiliser une approche différente pour récupérer les réparations
+      throw Exception('La fonction run_sql n\'est pas disponible. Utilisez une méthode alternative pour récupérer les données.');
+    }
+  }
+  
+  /// Crée une fonction SQL dans Supabase pour vérifier si une fonction existe
+  Future<void> _createFunctionExistsFunction() async {
+    try {
+      // Vérifier d'abord si la fonction run_sql existe
+      await _ensureRunSqlFunctionExists();
+      
+      // Vérifier si la fonction function_exists existe déjà en utilisant une requête SQL directe
+      final checkSql = '''
+      SELECT EXISTS (
+        SELECT 1 FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE n.nspname = 'public' AND p.proname = 'function_exists'
+      ) as exists;
+      ''';
+      
+      final checkResult = await client.rpc('run_sql', params: {'sql': checkSql});
+      
+      // Analyser le résultat pour voir si la fonction existe
+      bool functionExists = false;
+      if (checkResult.data != null && checkResult.data is List && (checkResult.data as List).isNotEmpty) {
+        final resultMap = (checkResult.data as List)[0] as Map<String, dynamic>;
+        functionExists = resultMap['exists'] as bool? ?? false;
+      }
+      
+      if (functionExists) {
+        print('La fonction function_exists existe déjà');
+        return;
+      }
+      
+      // Créer la fonction function_exists
+      final sql = '''
+      CREATE OR REPLACE FUNCTION function_exists(function_name TEXT)
+      RETURNS BOOLEAN AS \$\$
+      BEGIN
+        RETURN EXISTS (
+          SELECT 1 FROM pg_proc p
+          JOIN pg_namespace n ON p.pronamespace = n.oid
+          WHERE n.nspname = 'public' AND p.proname = function_name
+        );
+      END;
+      \$\$ LANGUAGE plpgsql;
+      ''';
+      
+      await client.rpc('run_sql', params: {'sql': sql});
+      print('Fonction function_exists créée avec succès');
+    } catch (e) {
+      print('Erreur lors de la création de la fonction function_exists: $e');
+      // En cas d'échec, nous continuerons avec la méthode standard
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -45,13 +46,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
+      // Récupérer le token FCM et le stocker dans Supabase
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      final fcmToken = await notificationService.getToken();
+      if (fcmToken != null) {
+        await authService.updateUserFcmToken(user.uuid, fcmToken);
+      }
+
       // Rediriger vers la page d'accueil appropriée en fonction du type d'utilisateur
       if (user.userType == 'client') {
         context.go('/client');
       } else if (user.userType == 'point_relais') {
         context.go('/point_relais');
       } else if (user.userType == 'technicien') {
-        context.go('/technicien');
+        context.go('/technicien/${user.uuid}');
       } else if (user.userType == 'admin') {
         context.go('/admin');
       } else {

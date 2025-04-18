@@ -534,7 +534,7 @@ class _CreateRepairDialogState extends State<CreateRepairDialog> {
       
       if (selectedClient != null) {
         // Client existant sélectionné
-        clientId = selectedClient!.id;
+        clientId = selectedClient!.uuid;
         clientName = selectedClient!.name;
       } else if (showNewClientForm) {
         // Vérification des champs du nouveau client
@@ -627,7 +627,7 @@ class _CreateRepairDialogState extends State<CreateRepairDialog> {
             phoneNumber: newClientPhoneController.text.trim(),
             password: newClientPasswordController.text.trim(),
           );
-          clientId = newClient.id;
+          clientId = newClient.uuid;
           clientName = newClient.name;
         }
         

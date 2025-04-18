@@ -49,7 +49,7 @@ class _RelayRepairsScreenState extends State<RelayRepairsScreen> with SingleTick
       
       if (user is PointRelaisModel) {
         // Charger les réparations associées à ce point relais
-        final repairs = await _repairService.getRepairsForPointRelais(user.id);
+        final repairs = await _repairService.getRepairsForPointRelais(user.uuid);
         
         // Trier les réparations par statut
         _pendingRepairs = repairs.where((repair) => 

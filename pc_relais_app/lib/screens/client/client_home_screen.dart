@@ -38,7 +38,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
               context.go('/client');
               break;
             case 1:
-              context.go('/client/new_repair');
+              context.go('/client/new-repair');
               break;
             case 2:
               context.go('/client/repairs');
@@ -145,6 +145,21 @@ class _ClientHomeContentState extends State<ClientHomeContent> {
                   content: Text('Fonctionnalité à venir'),
                 ),
               );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Déconnexion',
+            onPressed: () async {
+              try {
+                await Provider.of<AuthService>(context, listen: false).signOut();
+                // Ne pas naviguer ici, laisser le GoRouter gérer la redirection globale
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Erreur lors de la déconnexion: $e')),
+                );
+              }
             },
           ),
         ],
@@ -263,7 +278,7 @@ class _ClientHomeContentState extends State<ClientHomeContent> {
                   
                   // Réparations en cours - chargées dynamiquement
                   FutureBuilder<List<RepairModel>>(
-                    future: Provider.of<RepairService>(context).getRepairsForClient(user.id),
+                    future: Provider.of<RepairService>(context).getRepairsForClient(user.uuid),
                     builder: (context, repairsSnapshot) {
                       if (repairsSnapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());

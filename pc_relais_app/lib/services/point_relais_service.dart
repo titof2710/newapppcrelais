@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:uuid/uuid.dart';
 import '../models/user_model.dart';
 import 'supabase_config.dart';
 import 'supabase_service.dart';
@@ -49,18 +50,13 @@ class PointRelaisService {
         'storage_capacity': storageCapacity,
       };
 
-      final response = await _supabaseService.client
+      await _supabaseService.client
           .from(SupabaseConfig.usersTable)
-          .insert(pointRelaisData)
-          .execute();
-          
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la création du profil point relais: ${SupabaseHelper.getErrorMessage(response)}');
-      }
+          .insert(pointRelaisData);
 
       // Créer un objet UserModel pour le retour
       final UserModel newPointRelais = UserModel(
-        id: user.uid,
+        uuid: const Uuid().v4(),
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -78,18 +74,11 @@ class PointRelaisService {
   // Obtenir tous les points relais
   Future<List<UserModel>> getAllPointRelais() async {
     try {
-      final response = await _supabaseService.client
+      final data = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('user_type', 'point_relais')
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la récupération des points relais: ${SupabaseHelper.getErrorMessage(response)}');
-      }
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data.map((userData) => UserModel.fromJson(userData)).toList();
+          .eq('user_type', 'point_relais');
+      return (data as List).map((userData) => UserModel.fromJson(userData)).toList();
     } catch (e) {
       throw Exception('Erreur lors de la récupération des points relais: $e');
     }
@@ -104,7 +93,7 @@ class PointRelaisService {
   }) async {
     try {
       final Map<String, dynamic> updateData = {
-        'id': pointRelais.id,
+        'uuid': pointRelais.uuid,
         'name': pointRelais.name,
         'email': pointRelais.email,
         'phone_number': pointRelais.phoneNumber,
@@ -127,15 +116,11 @@ class PointRelaisService {
         updateData['storage_capacity'] = storageCapacity;
       }
 
-      final response = await _supabaseService.client
+      await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .update(updateData)
-          .eq('id', pointRelais.id)
-          .execute();
-          
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la mise à jour du point relais: ${SupabaseHelper.getErrorMessage(response)}');
-      }
+          .eq('id', pointRelais.uuid);
+      // La nouvelle API lève une exception en cas d'erreur
     } catch (e) {
       throw Exception('Erreur lors de la mise à jour du point relais: $e');
     }

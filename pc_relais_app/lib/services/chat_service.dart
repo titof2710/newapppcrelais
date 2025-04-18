@@ -166,7 +166,7 @@ class ChatService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.conversationsTable)
           .insert(conversation.toJson())
-          .execute();
+          ;
           
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la création de la conversation: ${SupabaseHelper.getErrorMessage(response)}');
@@ -198,7 +198,7 @@ class ChatService {
       final msgResponse = await _supabaseService.client
           .from(SupabaseConfig.messagesTable)
           .insert(messageData)
-          .execute();
+          ;
           
       if (SupabaseHelper.hasError(msgResponse)) {
         throw Exception('Erreur lors de l\'envoi du message: ${SupabaseHelper.getErrorMessage(msgResponse)}');
@@ -210,13 +210,13 @@ class ChatService {
           .select()
           .eq('id', conversationId)
           .single()
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(getConvResponse)) {
         throw Exception('Conversation introuvable: ${SupabaseHelper.getErrorMessage(getConvResponse)}');
       }
 
-      final ChatConversation conversation = ChatConversation.fromJson(getConvResponse.data as Map<String, dynamic>);
+      final ChatConversation conversation = ChatConversation.fromJson(getConvResponse as Map<String, dynamic>);
       
       // Mettre à jour les compteurs de messages non lus pour tous les participants sauf l'expéditeur
       final Map<String, int> updatedUnreadCounts = Map.from(conversation.unreadCounts);
@@ -234,7 +234,7 @@ class ChatService {
             'unreadCounts': updatedUnreadCounts,
           })
           .eq('id', conversationId)
-          .execute();
+          ;
           
       if (SupabaseHelper.hasError(updateConvResponse)) {
         throw Exception('Erreur lors de la mise à jour de la conversation: ${SupabaseHelper.getErrorMessage(updateConvResponse)}');
@@ -258,13 +258,13 @@ class ChatService {
           .select()
           .eq('id', conversationId)
           .single()
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(getConvResponse)) {
         throw Exception('Conversation introuvable: ${SupabaseHelper.getErrorMessage(getConvResponse)}');
       }
 
-      final ChatConversation conversation = ChatConversation.fromJson(getConvResponse.data as Map<String, dynamic>);
+      final ChatConversation conversation = ChatConversation.fromJson(getConvResponse as Map<String, dynamic>);
       
       // Vérifier que l'utilisateur est un participant
       if (!conversation.participantIds.contains(currentUser.uid)) {
@@ -282,7 +282,7 @@ class ChatService {
             'unreadCounts': updatedUnreadCounts,
           })
           .eq('id', conversationId)
-          .execute();
+          ;
           
       if (SupabaseHelper.hasError(updateConvResponse)) {
         throw Exception('Erreur lors de la mise à jour de la conversation: ${SupabaseHelper.getErrorMessage(updateConvResponse)}');
@@ -295,7 +295,7 @@ class ChatService {
           .eq('conversationId', conversationId)
           .eq('isRead', false)
           .neq('senderId', currentUser.uid)
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(updateMsgResponse)) {
         throw Exception('Erreur lors de la mise à jour des messages: ${SupabaseHelper.getErrorMessage(updateMsgResponse)}');
@@ -313,13 +313,13 @@ class ChatService {
           .select()
           .eq('id', conversationId)
           .single()
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Conversation introuvable: ${SupabaseHelper.getErrorMessage(response)}');
       }
 
-      return ChatConversation.fromJson(response.data as Map<String, dynamic>);
+      return ChatConversation.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Erreur lors de la récupération de la conversation: $e');
     }
@@ -340,13 +340,13 @@ class ChatService {
           .from(SupabaseConfig.conversationsTable)
           .select()
           .order('lastMessageAt', ascending: false)
-          .execute();
+          ;
 
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la récupération des conversations: ${SupabaseHelper.getErrorMessage(response)}');
       }
 
-      final List<dynamic> data = response.data as List<dynamic>;
+      final List<dynamic> data = response as List<dynamic>;
       return data
           .map((item) => ChatConversation.fromJson(item as Map<String, dynamic>))
           .where((conversation) => conversation.participantIds.contains(currentUser.uid))
@@ -376,13 +376,13 @@ class ChatService {
           .select()
           .eq('conversationId', conversationId)
           .order('timestamp', ascending: false)
-          .execute();
+          ;
 
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la récupération des messages: ${SupabaseHelper.getErrorMessage(response)}');
       }
 
-      final List<dynamic> data = response.data as List<dynamic>;
+      final List<dynamic> data = response as List<dynamic>;
       return data
           .map((item) => ChatMessage.fromJson(item as Map<String, dynamic>))
           .toList();

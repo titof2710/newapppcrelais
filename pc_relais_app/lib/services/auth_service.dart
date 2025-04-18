@@ -1,6 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'package:gotrue/gotrue.dart' show OAuthProvider;
+import 'package:uuid/uuid.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../models/user_model.dart';
 import '../models/technicien_model.dart';
 import '../models/admin_model.dart';
@@ -10,15 +12,37 @@ import 'supabase_config.dart';
 import 'supabase_service.dart';
 import 'supabase_helper.dart';
 
-class AuthService {
-  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
-  final SupabaseService _supabaseService = SupabaseService();
+import 'package:flutter/foundation.dart';
 
-  // Obtenir l'utilisateur actuel
-  firebase_auth.User? get currentUser => _auth.currentUser;
+class AuthService extends ChangeNotifier {
+  UserModel? _currentUser;
+  UserModel? get currentUser => _currentUser;
+
+  Future<void> refreshCurrentUser() async {
+    _currentUser = await getCurrentUserData();
+    notifyListeners();
+  }
+  /// Met à jour le token FCM de l'utilisateur dans Supabase
+  Future<void> updateUserFcmToken(String uuid, String fcmToken) async {
+    try {
+      final response = await _supabaseService.client
+          .from(SupabaseConfig.usersTable)
+          .update({'fcm_token': fcmToken})
+          .eq('uuid', uuid);
+      if (SupabaseHelper.hasError(response)) {
+        throw Exception('Erreur lors de la mise à jour du token FCM: ${SupabaseHelper.getErrorMessage(response)}');
+      }
+    } catch (e) {
+      print('Erreur updateUserFcmToken: $e');
+    }
+  }
+
+  final SupabaseService _supabaseService = SupabaseService();
+  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
+
 
   // Stream pour suivre l'état d'authentification
-  Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
+  Stream<firebase_auth.User?> get authStateChanges => firebase_auth.FirebaseAuth.instance.authStateChanges();
 
   // Inscription d'un nouveau client
   Future<UserModel> registerClient({
@@ -29,20 +53,18 @@ class AuthService {
     String? address,
   }) async {
     try {
-      // Créer l'utilisateur dans Firebase Auth
-      final firebase_auth.UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      // Créer l'utilisateur dans Supabase Auth
+      final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
       );
-
-      final firebase_auth.User? user = userCredential.user;
+      final user = response.user;
       if (user == null) {
         throw Exception("L'inscription a échoué");
       }
-
-      // Créer le profil client dans Supabase
+      // Créer le profil client dans Supabase (table users)
       final ClientModel newClient = ClientModel(
-        id: user.uid,
+        uuid: user.id,
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -50,22 +72,26 @@ class AuthService {
         createdAt: DateTime.now(),
         repairIds: [],
       );
-
-      final response = await _supabaseService.client
+      final insertResponse = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .insert(newClient.toJson())
-          .execute();
-          
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la création du profil: ${SupabaseHelper.getErrorMessage(response)}');
+          .select();
+      print('Réponse Supabase après insertion :');
+      print(insertResponse);
+      if (SupabaseHelper.hasError(insertResponse)) {
+        print('Erreur détectée par SupabaseHelper.hasError !');
+        throw Exception('Erreur lors de la création du profil: ${SupabaseHelper.getErrorMessage(insertResponse)}');
       }
-
       // Sauvegarder le type d'utilisateur dans les préférences locales
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userType', 'client');
-
+      // Forcer la reconnexion pour que GoRouter détecte bien l'utilisateur
+      await Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+      print('[DEBUG] Reconnexion après inscription réussie.');
+      await refreshCurrentUser();
       return newClient;
     } catch (e) {
+      print('Erreur lors de l\'inscription client : $e');
       throw Exception('Erreur lors de l\'inscription: $e');
     }
   }
@@ -82,20 +108,18 @@ class AuthService {
     List<String> certifications = const [],
   }) async {
     try {
-      // Créer l'utilisateur dans Firebase Auth
-      final firebase_auth.UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      // Créer l'utilisateur dans Supabase Auth
+      final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
       );
-
-      final firebase_auth.User? user = userCredential.user;
+      final user = response.user;
       if (user == null) {
         throw Exception("L'inscription a échoué");
       }
-
-      // Créer le profil technicien dans Supabase
+      // Créer le profil technicien dans Supabase (table users)
       final TechnicienModel newTechnicien = TechnicienModel(
-        id: user.uid,
+        uuid: user.id,
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -106,20 +130,18 @@ class AuthService {
         certifications: certifications,
         assignedRepairs: [],
       );
-
-      final response = await _supabaseService.client
+      final insertResponse = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
-          .insert(newTechnicien.toJson())
-          .execute();
-          
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la création du profil: ${SupabaseHelper.getErrorMessage(response)}');
+          .insert(newTechnicien.toJson());
+      if (SupabaseHelper.hasError(insertResponse)) {
+        throw Exception('Erreur lors de la création du profil: ${SupabaseHelper.getErrorMessage(insertResponse)}');
       }
-
       // Sauvegarder le type d'utilisateur dans les préférences locales
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userType', 'technicien');
-
+      // Reconnexion Supabase pour activer l'utilisateur côté Provider
+      await Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+      await refreshCurrentUser();
       return newTechnicien;
     } catch (e) {
       throw Exception('Erreur lors de l\'inscription: $e');
@@ -138,20 +160,19 @@ class AuthService {
     required int storageCapacity,
   }) async {
     try {
-      // Créer l'utilisateur dans Firebase Auth
-      final firebase_auth.UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      // Créer l'utilisateur dans Supabase Auth
+      // Créer l'utilisateur dans Supabase Auth
+      final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
       );
-
-      final firebase_auth.User? user = userCredential.user;
+      final user = response.user;
       if (user == null) {
         throw Exception("L'inscription a échoué");
       }
-
-      // Créer le profil point relais dans Supabase
+      // Créer le profil point relais dans Supabase (table users)
       final PointRelaisModel newPointRelais = PointRelaisModel(
-        id: user.uid,
+        uuid: user.id,
         email: email,
         name: name,
         phoneNumber: phoneNumber,
@@ -163,19 +184,19 @@ class AuthService {
         createdAt: DateTime.now(),
       );
 
-      final response = await _supabaseService.client
+      final insertResponse = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
-          .insert(newPointRelais.toJson())
-          .execute();
-          
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Erreur lors de la création du profil: ${SupabaseHelper.getErrorMessage(response)}');
+          .insert(newPointRelais.toJson());
+      if (SupabaseHelper.hasError(insertResponse)) {
+        throw Exception('Erreur lors de la création du profil: ${SupabaseHelper.getErrorMessage(insertResponse)}');
       }
 
       // Sauvegarder le type d'utilisateur dans les préférences locales
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userType', 'point_relais');
-
+      // Reconnexion Supabase pour activer l'utilisateur côté Provider
+      await Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+      await refreshCurrentUser();
       return newPointRelais;
     } catch (e) {
       throw Exception('Erreur lors de l\'inscription: $e');
@@ -188,54 +209,46 @@ class AuthService {
     required String password,
   }) async {
     try {
-      // Connecter l'utilisateur avec Firebase Auth
-      final firebase_auth.UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      // Connexion Supabase Auth
+      final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
-
-      final firebase_auth.User? user = userCredential.user;
+      final user = response.user;
       if (user == null) {
         throw Exception('La connexion a échoué');
       }
-
-      // Récupérer les données de l'utilisateur depuis Supabase
-      final response = await _supabaseService.client
+      print('Recherche utilisateur avec uuid: \'${user.id}\'');
+      final userResponse = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('id', user.uid)
-          .single()
-          .execute();
-      
-      if (SupabaseHelper.hasError(response)) {
-        throw Exception('Profil utilisateur introuvable: ${SupabaseHelper.getErrorMessage(response)}');
+          .eq('uuid', user.id)
+          .single();
+      if (SupabaseHelper.hasError(userResponse)) {
+        throw Exception('Profil utilisateur introuvable: ${SupabaseHelper.getErrorMessage(userResponse)}');
       }
-
-      final userData = response.data as Map<String, dynamic>;
+      final userData = userResponse as Map<String, dynamic>;
       final String userType = userData['user_type'] as String;
-
-      // Sauvegarder le type d'utilisateur dans les préférences locales
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userType', userType);
-
-      // Retourner le modèle d'utilisateur approprié
+      // Met à jour l'utilisateur courant
       if (userType == 'client') {
-        return ClientModel.fromJson(userData);
+        _currentUser = ClientModel.fromJson(userData);
       } else if (userType == 'point_relais') {
-        return PointRelaisModel.fromJson(userData);
+        _currentUser = PointRelaisModel.fromJson(userData);
       } else if (userType == 'technicien') {
-        return TechnicienModel.fromJson(userData);
+        _currentUser = TechnicienModel.fromJson(userData);
       } else if (userType == 'admin') {
-        // Utiliser le modèle AdminModel si disponible, sinon utiliser UserModel
         try {
-          return AdminModel.fromJson(userData);
+          _currentUser = AdminModel.fromJson(userData);
         } catch (e) {
-          // Fallback au modèle utilisateur de base si AdminModel n'est pas disponible
-          return UserModel.fromJson(userData);
+          _currentUser = UserModel.fromJson(userData);
         }
       } else {
         throw Exception('Type d\'utilisateur non reconnu: $userType');
       }
+      notifyListeners();
+      return _currentUser!;
     } catch (e) {
       throw Exception('Erreur lors de la connexion: $e');
     }
@@ -272,23 +285,22 @@ class AuthService {
   // Récupérer les informations de l'utilisateur actuel
   Future<UserModel?> getCurrentUserData() async {
     try {
-      final firebase_auth.User? currentUser = _auth.currentUser;
-      if (currentUser == null) {
+      final supabaseUser = Supabase.instance.client.auth.currentUser;
+      if (supabaseUser == null) {
         return null;
       }
 
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .select()
-          .eq('id', currentUser.uid)
-          .single()
-          .execute();
+          .eq('uuid', supabaseUser.id)
+          .single();
       
       if (SupabaseHelper.hasError(response)) {
         return null;
       }
 
-      final userData = response.data as Map<String, dynamic>;
+      final userData = response as Map<String, dynamic>;
       final String userType = userData['user_type'] as String;
 
       if (userType == 'client') {
@@ -312,8 +324,8 @@ class AuthService {
       final response = await _supabaseService.client
           .from(SupabaseConfig.usersTable)
           .update(user.toJson())
-          .eq('id', user.id)
-          .execute();
+          .eq('id', user.uuid)
+          ;
           
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la mise à jour du profil: ${SupabaseHelper.getErrorMessage(response)}');
@@ -341,13 +353,13 @@ class AuthService {
           .from(SupabaseConfig.usersTable)
           .select()
           .eq('user_type', 'point_relais')
-          .execute();
+          ;
       
       if (SupabaseHelper.hasError(response)) {
         throw Exception('Erreur lors de la récupération des points relais: ${SupabaseHelper.getErrorMessage(response)}');
       }
       
-      final List<dynamic> data = response.data as List<dynamic>;
+      final List<dynamic> data = response as List<dynamic>;
       return data.map((item) => PointRelaisModel.fromJson(item as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Erreur lors de la récupération des points relais: $e');

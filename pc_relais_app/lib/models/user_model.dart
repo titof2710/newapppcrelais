@@ -1,15 +1,15 @@
 class UserModel {
-  final String id;
+  final String uuid; // <-- Identifiant unique utilisateur
   final String email;
   final String name;
   final String phoneNumber;
   final String userType; // 'client', 'point_relais', 'technicien' ou 'admin'
-  final String? profileImageUrl;
+  final String? profileImageUrl; // Correspond à la colonne 'profile_image' dans la table users
   final String? address;
   final DateTime createdAt;
 
   UserModel({
-    required this.id,
+    required this.uuid, // <-- Ajout dans le constructeur
     required this.email,
     required this.name,
     required this.phoneNumber,
@@ -21,14 +21,14 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as String,
+      uuid: json['uuid'] as String, // <-- Ajout ici
       email: json['email'] as String,
       name: json['first_name'] != null && json['last_name'] != null
           ? '${json['first_name']} ${json['last_name']}'
           : (json['first_name'] ?? json['last_name'] ?? ''),
       phoneNumber: json['phone'] as String,
       userType: json['user_type'] as String,
-      profileImageUrl: json['profile_image_url'] as String?,
+      profileImageUrl: json['profile_image'] as String?,
       address: json['address'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -41,20 +41,20 @@ class UserModel {
     String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
     
     return {
-      'id': id,
+      'uuid': uuid, // <-- Ajout dans toJson
       'email': email,
       'first_name': firstName,
       'last_name': lastName,
       'phone': phoneNumber,
       'user_type': userType,
-      'profile_image_url': profileImageUrl,
+      'profile_image': profileImageUrl,
       'address': address,
       'created_at': createdAt.toIso8601String(),
     };
   }
 
   UserModel copyWith({
-    String? id,
+    String? uuid,
     String? email,
     String? name,
     String? phoneNumber,
@@ -64,7 +64,7 @@ class UserModel {
     DateTime? createdAt,
   }) {
     return UserModel(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       email: email ?? this.email,
       name: name ?? this.name,
       phoneNumber: phoneNumber ?? this.phoneNumber,

@@ -136,7 +136,7 @@ class _TechnicienProfileScreenState extends State<TechnicienProfileScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MyPointRelaisScreen(technicienId: _technicien!.id),
+                    builder: (_) => MyPointRelaisScreen(technicienId: _technicien!.uuid),
                   ),
                 );
               }

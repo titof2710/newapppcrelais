@@ -415,10 +415,10 @@ class _RepairsManagementScreenState extends State<RepairsManagementScreen> {
                       phoneNumber: newClientPhoneController.text.trim(),
                       password: newClientPasswordController.text.trim(),
                     );
-                    clientId = newClient.id;
+                    clientId = newClient.uuid;
                     clientName = "${newClient.name}";
                   } else if (selectedClient != null) {
-                    clientId = selectedClient!.id;
+                    clientId = selectedClient!.uuid;
                     clientName = selectedClient!.name;
                   } else {
                     throw Exception('Aucun client sélectionné');
@@ -1168,10 +1168,10 @@ if (showNewClientForm) {
     phoneNumber: newClientPhoneController.text.trim(),
     password: newClientPasswordController.text.trim(),
   );
-  clientId = newClient.id;
+  clientId = newClient.uuid;
   clientName = "${newClient.name}";
 } else if (selectedClient != null) {
-  clientId = selectedClient!.id;
+  clientId = selectedClient!.uuid;
   clientName = selectedClient!.name;
 } else {
   throw Exception('Aucun client sélectionné');
